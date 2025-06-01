@@ -20,6 +20,16 @@
   <exe name="xcrun --sdk macosx${MACOSX_VER} clang++" if="HXCPP_CLANG" />
   <flag value="-c"/>
   <flag value="-fvisibility=hidden"/>
+  <cppflag value="-std=c++11" if="HXCPP_CPP11"/>
+  <cppflag value="-std=c++14" if="HXCPP_CPP14"/>
+  <cppflag value="-Wc++14-extensions" if="HXCPP_CPP14"/>
+  <cppflag value="-std=c++17" if="HXCPP_CPP17"/>
+  <cppflag value="-std=c++20" if="HXCPP_CPP20"/>
+  <cppflag value="-Wc++17-extensions" if="HXCPP_CPP17"/>
+  <cppflag value="-stdlib=libc++" unless="STDLIBCPP" />
+  <cppflag value="-stdlib=libstdc++" if="STDLIBCPP" />
+  <mmflag value="-stdlib=libc++" unless="STDLIBCPP" />
+  <mmflag value="-stdlib=libstdc++" if="STDLIBCPP" />
   
   <cppflag value="-frtti"/>
   <pchflag value="-x" />
