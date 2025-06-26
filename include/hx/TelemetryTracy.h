@@ -34,6 +34,9 @@
 #endif
 
 void __hxcpp_tracy_framemark();
+void __hxcpp_tracy_framemark_named(::String name);
+void __hxcpp_tracy_framemark_start(::String name);
+void __hxcpp_tracy_framemark_end(::String name);
 void __hxcpp_tracy_plot(::String name, ::Float val);
 void __hxcpp_tracy_plot_config(::String name, uint8_t format, bool step, bool fill, int color);
 void __hxcpp_tracy_message(::String msg, int color);
