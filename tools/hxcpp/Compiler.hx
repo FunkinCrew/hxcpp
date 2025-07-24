@@ -449,10 +449,7 @@ class Compiler
          if (delayedFilename!=null)
            args.push(delayedFilename);
 
-         if (inProgress != null)
-            inProgress.current++;
-
-         if (!Log.verbose && ((inTid >= 0 && BuildTool.threadExitCode == 0) || inTid < 0))
+         if (!Log.verbose && (inTid >= 0 && BuildTool.threadExitCode == 0))
          {
             printMutex.acquire();
 
@@ -473,7 +470,11 @@ class Compiler
             var output = "";
 
             if (inProgress != null)
-               output = ['-', inProgress.getFormattedProgress(), fileName, tagInfo].join(" ");
+            {
+                inProgress.current++;
+
+                output = ['-', inProgress.getFormattedProgress(), fileName, tagInfo].join(" ");
+            }
             else
                output = ['-', fileName, tagInfo].join(" ");
 
