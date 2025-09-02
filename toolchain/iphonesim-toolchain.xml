@@ -53,15 +53,19 @@
   <mmflag value="-fobjc-legacy-dispatch"/>
   <flag value="-Wno-unused-variable"/>
   <flag value="-arch"/>
-  <flag value="i386" unless="HXCPP_M64"/>
-  <flag value="x86_64" if="HXCPP_M64"/>
+  <flag value="i386" unless="HXCPP_M64 || HXCPP_ARM64"/>
+  <flag value="x86_64" if="HXCPP_M64" unless="HXCPP_ARM64" />
+  <flag value="arm64" if="HXCPP_ARM64" />
+  <flag value="-target" />
+  <flag value="x86_64-apple-ios-simulator" if="HXCPP_M64" unless="HXCPP_ARM64" />
+  <flag value="arm64-apple-ios-simulator" if="HXCPP_ARM64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator${IPHONE_VER}.sdk"/>
   <!-- Removed for iOS 8 -->
   <!-- <flag value="-fvisibility=hidden"/> -->
-  <!-- <flag value="-miphoneos-version-min=${IPHONE_VER}"/> -->
-  <flag value="-miphoneos-version-min=9.0" unless="HXCPP_IOS_MIN_VERSION" />
-  <flag value="-miphoneos-version-min=${HXCPP_IOS_MIN_VERSION}" if="HXCPP_IOS_MIN_VERSION" />
+  <!-- <flag value="-mios-simulator-version-min=${IPHONE_VER}"/> -->
+  <flag value="-mios-simulator-version-min=9.0" unless="HXCPP_IOS_MIN_VERSION" />
+  <flag value="-mios-simulator-version-min=${HXCPP_IOS_MIN_VERSION}" if="HXCPP_IOS_MIN_VERSION" />
   <flag value="-DIPHONE=IPHONE"/>
   <flag value="-DIPHONESIM=IPHONESIM"/>
   <flag value="-fobjc-arc" if="OBJC_ARC" />
@@ -95,8 +99,12 @@
   <mmflag value="-stdlib=libc++" if="HXCPP_CPP11 || HXCPP_CPP17" />
   <flag value="-dynamiclib"/>
   <flag value="-arch"/>
-  <flag value="i386" unless="HXCPP_M64"/>
-  <flag value="x86_64" if="HXCPP_M64"/>
+  <flag value="i386" unless="HXCPP_M64 || HXCPP_ARM64"/>
+  <flag value="x86_64" if="HXCPP_M64" unless="HXCPP_ARM64" />
+  <flag value="arm64" if="HXCPP_ARM64" />
+  <flag value="-target" />
+  <flag value="x86_64-apple-ios-simulator" if="HXCPP_M64" unless="HXCPP_ARM64" />
+  <flag value="arm64-apple-ios-simulator" if="HXCPP_ARM64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator${IPHONE_VER}.sdk"/>
   <flag value="-Wl,-undefined,dynamic_lookup"/>

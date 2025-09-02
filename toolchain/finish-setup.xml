@@ -40,8 +40,11 @@
 
 
 
-<set name="LIBEXTRA" value=".iphonesim-64" if="iphonesim"/>
-<set name="LIBEXTRA" value=".iphonesim" if="iphonesim" unless="HXCPP_M64"/>
+<section if="iphonesim">
+   <set name="LIBEXTRA" value=".iphonesim" unless="HXCPP_M64 || HXCPP_ARM64"/>
+   <set name="LIBEXTRA" value=".iphonesim-64" if="HXCPP_M64" unless="HXCPP_ARM64" />
+   <set name="LIBEXTRA" value=".iphonesim-arm64" if="HXCPP_ARM64" unless="HXCPP_M64" />
+</section>
 <section if="iphoneos">
 	<set name="LIBEXTRA" value=".iphoneos-v7" if="HXCPP_ARMV7"/>
 	<set name="LIBEXTRA" value=".iphoneos-v7s" if="HXCPP_ARMV7S"/>
@@ -113,7 +116,7 @@
       <echo value="Warning: INCREMENTAL requies Visual Studio 2015+"/>
       <!-- without INCREMENTAL -->
       <unset name="HXCPP_OPTIMIZE_LINK_INCREMENTAL"/>
-      <set name="HXCPP_OPTIMIZE_LINK" value="1"/> 
+      <set name="HXCPP_OPTIMIZE_LINK" value="1"/>
       <set name="OBJOPT" value="-opt" if="HXCPP_OPTIMIZE_LINK || HXCPP_OPTIMIZE_LINK_INCREMENTAL" unless="debug" />
       <set name="OBJEXT" value="${M64}${F32}${STAT}${OBJDBG}${OBJOPT}${NOCONSOLE}${RPI}${APIFP}${PRIME}" />
    </section>
