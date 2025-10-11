@@ -26,6 +26,8 @@
    </section>
 </section>
 
+<set name="HXCPP_CPP11" value="1" unless="HXCPP_NO_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
+
 <include name="toolchain/gcc-toolchain.xml"/>
 <set name="noM32" value="1" if="HXCPP_NO_M32" />
 <set name="noM32" value="1" if="HXCPP_M64" />

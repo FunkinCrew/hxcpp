@@ -1,7 +1,8 @@
 <xml>
 
-
 <echo value="Using tvOS SDK ${TVOS_VER}" if="VERBOSE"/>
+
+<set name="HXCPP_CPP11" value="1" unless="HXCPP_NO_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
 
 <set name="ARCH" value ="-64" if="HXCPP_ARM64" />
 
@@ -22,6 +23,16 @@
   <!-- <cppflag value="-fvisibility-inlines-hidden"/> -->
   <pchflag value="-x" />
   <pchflag value="c++-header" />
+  <cppflag value="-stdlib=libstdc++" if="FORCE_LIBGCC" />
+  <cppflag value="-stdlib=libc++" if="HXCPP_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
+  <cppflag value="-std=c++11" if="HXCPP_CPP11" />
+  <cppflag value="-std=c++17" if="HXCPP_CPP17" />
+  <cppflag value="-std=c++20" if="HXCPP_CPP20" />
+  <mmflag value="-stdlib=libstdc++" if="FORCE_LIBGCC" />
+  <mmflag value="-stdlib=libc++" if="HXCPP_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
+  <mmflag value="-std=c++11" if="HXCPP_CPP11" />
+  <mmflag value="-std=c++17" if="HXCPP_CPP17" />
+  <mmflag value="-std=c++20" if="HXCPP_CPP20" />
   <flag value="-g" if="HXCPP_DEBUG_LINK"/>
   <flag value="-O2" unless="debug"/>
   <flag value="-arch"/>
@@ -65,6 +76,10 @@
 <linker id="dll" exe="g++" >
   <exe name="xcrun --sdk appletvos${TVOS_VER} g++" if="HXCPP_GCC" />
   <exe name="xcrun --sdk appletvos${TVOS_VER} clang++" />
+  <cppflag value="-stdlib=libstdc++" if="FORCE_LIBGCC" />
+  <cppflag value="-stdlib=libc++" if="HXCPP_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
+  <mmflag value="-stdlib=libstdc++" if="FORCE_LIBGCC" />
+  <mmflag value="-stdlib=libc++" if="HXCPP_CPP11 || HXCPP_CPP17 || HXCPP_CPP20" />
   <flag value="-dynamiclib"/>
   <flag value="-arch"/>
   <flag value="arm64" if="HXCPP_ARM64" />
