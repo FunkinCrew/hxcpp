@@ -1000,6 +1000,8 @@ class BuildTool
             Log.warn('Increasing default C++ standard to C++11 instead of C++${defaultCxxStandard}');
             defaultCxxStandard = 11;
          }
+      } else if(mDefines.exists("HXCPP_CPP20")) {
+         defaultCxxStandard = 20;
       } else if(mDefines.exists("HXCPP_CPP17")) {
          defaultCxxStandard = 17;
       } else if (mDefines.exists("HXCPP_CPP14")) {
