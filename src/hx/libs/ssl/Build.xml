@@ -23,8 +23,11 @@
 	<lib name="crypt32.lib" if="windows" unless="static_link" />
 	<lib name="ws2_32.lib" if="windows" unless="static_link" />
 
-	<flag value="-framework" if="macos"/>
-	<flag value="Security" if="macos"/>
+	<flag value="-framework" if="macos || ios || tvos"/>
+	<flag value="Security" if="macos || ios || tvos"/>
+
+	<flag value="-framework" if="ios || tvos"/>
+	<flag value="CoreFoundation" if="ios || tvos"/>
 </target>
 
 </xml>
