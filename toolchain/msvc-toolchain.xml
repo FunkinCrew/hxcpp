@@ -93,9 +93,11 @@
   <flag value="-FS" if="HXCPP_FORCE_PDB_SERVER" />
   <flag value="-Oy-"/>
   <flag value="-c"/>
-  <flag value="-EHa" if="HXCPP_CATCH_SEGV" />
-  <flag value="-EHs" unless="HXCPP_CATCH_SEGV || winrt"/>
-  <flag value="-EHsc" if="winrt" unless="HXCPP_CATCH_SEGV" />
+  <section unless="HXCPP_NO_SEGV_HANDLING">
+    <flag value="-EHa" if="HXCPP_CATCH_SEGV" />
+    <flag value="-EHs" unless="HXCPP_CATCH_SEGV || winrt"/>
+    <flag value="-EHsc" if="winrt" unless="HXCPP_CATCH_SEGV" />
+  </section>
   <flag value="-GS-"/>
   <flag value="-arch:${MSVC_ARCH}" if="MSVC_ARCH" />
   <flag value="-I${HXCPP}/include"/>
