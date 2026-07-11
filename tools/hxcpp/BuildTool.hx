@@ -135,31 +135,34 @@ class BuildTool
 
       instance = this;
 
-      m64 = mDefines.exists("HXCPP_M64");
-      m32 = mDefines.exists("HXCPP_M32") || mDefines.exists("HXCPP_X86");
-      arm64 = mDefines.exists("HXCPP_ARM64");
-      var otherArmArchitecture = mDefines.exists("HXCPP_ARMV6") || mDefines.exists("HXCPP_ARMV7") || mDefines.exists("HXCPP_ARMV7S");
-      if (m64==m32 && !arm64 && !otherArmArchitecture)
+      if (!(mDefines.exists("emcc") || mDefines.exists("emscripten")))
       {
-         var arch = mDefines.get("HXCPP_ARCH");
-         if (arch!=null)
+         m64 = mDefines.exists("HXCPP_M64");
+         m32 = mDefines.exists("HXCPP_M32") || mDefines.exists("HXCPP_X86");
+         arm64 = mDefines.exists("HXCPP_ARM64");
+         var otherArmArchitecture = mDefines.exists("HXCPP_ARMV6") || mDefines.exists("HXCPP_ARMV7") || mDefines.exists("HXCPP_ARMV7S");
+         if (m64==m32 && !arm64 && !otherArmArchitecture)
          {
-            m64 = arch=="x86_64";
-            m32 = arch=="x86";
-            arm64 = arch=="arm64";
-         }
-         else
-         {
-            var hostArch = getArch();
+            var arch = mDefines.get("HXCPP_ARCH");
+            if (arch!=null)
+            {
+               m64 = arch=="x86_64";
+               m32 = arch=="x86";
+               arm64 = arch=="arm64";
+            }
+            else
+            {
+               var hostArch = getArch();
 
-            // Default to the current OS version.  windowsArm runs m32 code too
-            m64 = hostArch=="m64";
-            m32 = hostArch=="m32";
-            arm64 = hostArch=="arm64";
-         }
+               // Default to the current OS version.  windowsArm runs m32 code too
+               m64 = hostArch=="m64";
+               m32 = hostArch=="m32";
+               arm64 = hostArch=="arm64";
+            }
 
-         mDefines.remove(m32 ? "HXCPP_M64" : "HXCPP_M32");
-         set64(mDefines,m64,arm64);
+            mDefines.remove(m32 ? "HXCPP_M64" : "HXCPP_M32");
+            set64(mDefines,m64,arm64);
+         }
       }
 
       Profile.setEntry("parse xml");
