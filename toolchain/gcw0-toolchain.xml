@@ -29,7 +29,6 @@
 	<flag value="-fpic"/>
 	<flag value="-fPIC"/>
 	<cppflag value="-frtti"/>
-	<cppflag value="-std=c++11" />
    <cppflag value="-Wno-invalid-offsetof" />
    <flag value="-g" if="HXCPP_DEBUG_LINK"/>
 	<!-- <flag value="-fPIE" /> -->
