@@ -8,8 +8,6 @@
 
 	<include name="${this_dir}/mbedtls-flags.xml" />
 
-	<compilerflag value="-std=c99" unless="MSVC_VER" />
-
 	<file name="${MBEDTLS_DIR}/library/aes.c" />
 	<file name="${MBEDTLS_DIR}/library/aesni.c" />
 	<file name="${MBEDTLS_DIR}/library/arc4.c" />
