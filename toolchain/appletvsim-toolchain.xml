@@ -78,7 +78,6 @@
   <flag value="x86_64" if="HXCPP_M64"/>
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/AppleTVSimulator.platform/Developer/SDKs/AppleTVSimulator${TVOS_VER}.sdk"/>
-  <flag value="-Wl,-undefined,dynamic_lookup"/>
   <flag value="-fpic"/>
   <flag value="-fPIC"/>
   <flag value="-fvisibility=hidden"/>

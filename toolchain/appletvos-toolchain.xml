@@ -70,7 +70,6 @@
   <flag value="arm64" if="HXCPP_ARM64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/AppleTVOS.platform/Developer/SDKs/AppleTVOS${TVOS_VER}.sdk"/>
-  <flag value="-Wl,-undefined,dynamic_lookup"/>
   <flag value="-fpic"/>
   <flag value="-fPIC"/>
   <flag value="-fvisibility=hidden"/>

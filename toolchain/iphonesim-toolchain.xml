@@ -89,7 +89,6 @@
   <flag value="arm64-apple-ios-simulator" if="HXCPP_ARM64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/iPhoneSimulator.platform/Developer/SDKs/iPhoneSimulator${IPHONE_VER}.sdk"/>
-  <flag value="-Wl,-undefined,dynamic_lookup"/>
   <flag value="-fpic"/>
   <flag value="-fPIC"/>
   <flag value="-fvisibility=hidden"/>
