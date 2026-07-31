@@ -90,7 +90,6 @@
   <flag value="arm64" if="HXCPP_ARM64" />
   <flag value="-isysroot"/>
   <flag value="${DEVELOPER_DIR}/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS${IPHONE_VER}.sdk"/>
-  <flag value="-Wl,-undefined,dynamic_lookup"/>
   <flag value="-fpic"/>
   <flag value="-fPIC"/>
   <flag value="-fvisibility=hidden"/>
