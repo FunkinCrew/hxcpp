@@ -197,10 +197,8 @@ class Builder
                   validArchs.set("armv7", ["-Dwebos"].concat(staticFlags) );
                
                case "tvos":
-                  validArchs.set("arm64", ["-Dappletvos", "-DHXCPP_ARM64", "-DHXCPP_M64", "-DENABLE_BITCODE"].concat(staticFlags) );
-                  // NOTE: removed as there's no 32bit support for the AppleTV simulator
-                  //validArchs.set("x86", ["-Dappletvsim", "-DENABLE_BITCODE"].concat(staticFlags) );
-                  validArchs.set("x86_64", ["-Dappletvsim", "-DHXCPP_M64", "-DENABLE_BITCODE"].concat(staticFlags) );
+                  validArchs.set("arm64", ["-Dappletvos", "-DHXCPP_ARM64", "-DHXCPP_M64"].concat(staticFlags) );
+                  validArchs.set("x86_64", ["-Dappletvsim", "-DHXCPP_M64"].concat(staticFlags) );
 
             }
 
