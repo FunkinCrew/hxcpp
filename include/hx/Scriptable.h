@@ -191,6 +191,7 @@ public:
    virtual void run() = 0;
    virtual void boot() = 0;
    virtual ::hx::Class resolveClass( ::String inName) = 0;
+   virtual void unload() { }
 };
 typedef ::hx::ObjectPtr<CppiaLoadedModule_obj> CppiaLoadedModule;
 

@@ -16,6 +16,20 @@ int sgNativeNameSlotCount = 0;
 
 Array<Dynamic> gAllCppiaModules;
 
+static CppiaModule *sLoadingModule = 0;
+
+void _hx_cppia_track_expr(void *inExpr)
+{
+   if (sLoadingModule)
+      sLoadingModule->allExprs.insert((CppiaExpr *)inExpr);
+}
+
+void _hx_cppia_untrack_expr(void *inExpr)
+{
+   if (sLoadingModule)
+      sLoadingModule->allExprs.erase((CppiaExpr *)inExpr);
+}
+
 std::vector<hx::Resource> scriptResources;
 
 
@@ -29,6 +43,7 @@ CppiaModule::CppiaModule()
    creatingClass = 0;
    creatingFunction = 0;
    scriptId = ++sScriptId;
+   unloaded = false;
    strings = Array_obj<String>::__new(0,0);
    if (sgNativeNameSlotCount>0)
       for(int i=2;i<sgNativeNameSlotCount;i++)
@@ -52,18 +67,44 @@ void CppiaModule::setDebug(CppiaExpr *outExpr, int inFileId, int inLine)
 
 // --- CppiaModule -------------------------
 
+// Frees the code and leaves everything a raw pointer can still reach in place.
+void CppiaModule::unload()
+{
+   if (unloaded)
+      return;
+   unloaded = true;
+
+   for(int i=0;i<classes.size();i++)
+      if (classes[i])
+         classes[i]->deactivate();
+
+   markable.clear();
+   main = 0;
+
+   std::vector<CppiaExpr *> toFree(allExprs.begin(), allExprs.end());
+   allExprs.clear();
+
+   for(int i=0;i<toFree.size();i++)
+   {
+      ScriptCallable *callable = dynamic_cast<ScriptCallable *>(toFree[i]);
+      if (callable)
+         callable->deactivate();
+      else
+         delete toFree[i];
+   }
+}
+
+
 CppiaModule::~CppiaModule()
 {
-   delete main;
-   for(int i=0;i<classes.size();i++)
-      delete classes[i];
+   unload();
 }
 
 void CppiaModule::link()
 {
    DBGLOG("Resolve registered - super\n");
    HaxeNativeClass::link();
-   
+
    DBGLOG("Resolve typeIds\n");
    for(int t=0;t<types.size();t++)
       types[t]->link(*this);
@@ -299,6 +340,9 @@ public:
 
    void boot() HXCPP_OVERRIDE
    {
+      if (cppia->unloaded)
+         hx::Throw( HX_CSTRING("Cannot boot a cppia module that has been unloaded") );
+
       if (booted)
          return;
 
@@ -319,6 +363,9 @@ public:
 
    void run() HXCPP_OVERRIDE
    {
+      if (cppia->unloaded)
+         hx::Throw( HX_CSTRING("Cannot run a cppia module that has been unloaded") );
+
       if (!booted)
          boot();
       if (cppia->main)
@@ -342,6 +389,11 @@ public:
             hx::Throw(error);
          }
       }
+   }
+
+   void unload() HXCPP_OVERRIDE
+   {
+      cppia->unload();
    }
 
    ::hx::Class resolveClass( ::String inName) HXCPP_OVERRIDE
@@ -368,6 +420,9 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
    CppiaModule   *cppiaPtr = new CppiaModule();
    CppiaLoadedModule loadedModule = new CppiaObject(cppiaPtr);
    gAllCppiaModules->push(loadedModule);
+
+   // Attribute every expression allocated from here on to this module.
+   sLoadingModule = cppiaPtr;
 
 
    CppiaModule   &cppia = *cppiaPtr;
@@ -460,7 +515,7 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
          scriptResources[count].mDataLength = 0;
          scriptResources[count].mData = 0;
          scriptResources[count].mName = String();
-         
+
          RegisterResources(&scriptResources[0]);
       }
       else
@@ -470,8 +525,8 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
    }
    catch(const char *errorString)
    {
-      error = HX_CSTRING("Error reading file ") + String(errorString) + 
-                HX_CSTRING(", line ") + String(stream.line) + HX_CSTRING(", char ") + 
+      error = HX_CSTRING("Error reading file ") + String(errorString) +
+                HX_CSTRING(", line ") + String(stream.line) + HX_CSTRING(", char ") +
                    String(stream.pos);
    }
 
@@ -501,6 +556,8 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
          }
       #endif
    }
+
+   sLoadingModule = 0;
 
    if (error.raw_ptr())
       hx::Throw(error);

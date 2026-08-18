@@ -153,6 +153,9 @@ typedef std::map<int,CppiaStackVar *> CppiaStackVarMap;
 
 extern String sInvalidArgCount;
 
+void _hx_cppia_track_expr(void *inExpr);
+void _hx_cppia_untrack_expr(void *inExpr);
+
 struct CppiaExpr
 {
    int line;
@@ -161,6 +164,18 @@ struct CppiaExpr
    const char *functionName;
    int haxeTypeId;
 
+   void *operator new(size_t inSize)
+   {
+      void *result = ::operator new(inSize);
+      _hx_cppia_track_expr(result);
+      return result;
+   }
+
+   void operator delete(void *inPtr)
+   {
+      _hx_cppia_untrack_expr(inPtr);
+      ::operator delete(inPtr);
+   }
 
    CppiaExpr() : line(0), filename(0), className(0), functionName(0)
    {
@@ -283,6 +298,8 @@ struct ScriptCallable : public CppiaDynamicExpr
    int                          captureSize;
 
 
+   void deactivate();
+
    ScriptCallable(CppiaStream &stream);
    ScriptCallable(CppiaExpr *inBody);
    ScriptCallable(CppiaModule &inModule,ScriptNamedFunction *inFunction);
@@ -372,7 +389,10 @@ public:
    std::vector< TypeData * >       types;
    std::vector< CppiaClassInfo * > classes;
    std::vector< CppiaExpr * >      markable;
+
+   hx::UnorderedSet< CppiaExpr * > allExprs;
    hx::UnorderedSet<int>           allFileIds;
+
    typedef std::map< std::string, int > InterfaceSlots;
    InterfaceSlots                  interfaceSlots;
 
@@ -384,9 +404,12 @@ public:
 
    ScriptCallable                  *main;
 
+   bool                            unloaded;
+
    CppiaModule();
    ~CppiaModule();
 
+   void unload();
    void link();
    void compile();
    void setDebug(CppiaExpr *outExpr, int inFileId, int inLine);
@@ -650,6 +673,8 @@ public:
    bool      containsPointers;
    int       dynamicMapOffset;
    int       interfaceSlotSize;
+   int       vtableSlotCount;
+   bool      unloaded;
    void      **vtable;
    std::string name;
    std::map<int, void *> interfaceScriptTables;
@@ -704,6 +729,7 @@ public:
 
    void link();
    void linkTypes();
+   void deactivate();
 
 
    inline bool isNativeProperty(const String &inString);
