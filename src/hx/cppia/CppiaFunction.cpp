@@ -681,6 +681,27 @@ void ScriptCallable::compile()
 }
 #endif
 
+struct UnloadedBody : public CppiaExpr
+{
+   const char *getName() HXCPP_OVERRIDE { return "UnloadedBody"; }
+
+   void runVoid(CppiaCtx *ctx) HXCPP_OVERRIDE
+   {
+      hx::Throw( HX_CSTRING("Called a function from a cppia class that has been unloaded") );
+   }
+};
+
+static UnloadedBody sUnloadedBody;
+
+void ScriptCallable::deactivate()
+{
+   body = &sUnloadedBody;
+   #ifdef CPPIA_JIT
+   compiled = 0;
+   #endif
+}
+
+
 // --- CppiaClosure ----
 
 
