@@ -412,6 +412,41 @@ int CppiaClassInfo::getScriptVTableOffset()
    return haxeBase ? (int)(haxeBase->mDataOffset - sizeof(void *)) : sizeof(hx::Object);
 }
 
+void **CppiaClassInfo::getSuperVTable(int inSlot)
+{
+   if (!vtable || inSlot < 0 || inSlot >= vtableSlotCount)
+      return 0;
+
+   if ((int)superVtables.size() <= inSlot)
+      superVtables.resize(inSlot + 1, 0);
+
+   if (superVtables[inSlot])
+      return superVtables[inSlot];
+
+   int count = vtableSlotCount + 2 + interfaceSlotSize;
+   void **base = vtable - interfaceSlotSize - 1;
+
+   void **copy = new void *[count];
+   memcpy(copy, base, sizeof(void *) * count);
+
+   copy += interfaceSlotSize + 1;
+   copy[inSlot] = 0;
+
+   superVtables[inSlot] = copy;
+
+   return copy;
+}
+
+
+void CppiaClassInfo::freeSuperVTables()
+{
+   for(int i=0;i<(int)superVtables.size();i++)
+      if (superVtables[i])
+         delete [] (superVtables[i] - interfaceSlotSize - 1);
+
+   superVtables.clear();
+}
+
 
 bool CppiaClassInfo::isNativeProperty(const String &inString)
 {
@@ -692,6 +727,8 @@ void CppiaClassInfo::deactivate()
    if (unloaded)
       return;
    unloaded = true;
+
+   freeSuperVTables();
 
    if (vtable)
    {
@@ -1475,7 +1512,7 @@ Dynamic CppiaClassInfo::getStaticValue(const String &inName,hx::PropertyAccess  
          return var.getStaticValue();
    }
 
-   printf("Get static field not found (%s) %s\n", name.c_str(),inName.out_str());
+   DBGLOG("Get static field not found (%s) %s\n", name.c_str(),inName.out_str());
    return null();
 }
 
