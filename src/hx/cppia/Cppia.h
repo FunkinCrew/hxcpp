@@ -676,6 +676,7 @@ public:
    int       vtableSlotCount;
    bool      unloaded;
    void      **vtable;
+   std::vector<void **> superVtables;
    std::string name;
    std::map<int, void *> interfaceScriptTables;
    std::vector<ScriptNamedFunction *> nativeInterfaceFunctions;
@@ -756,6 +757,8 @@ public:
 
    void *getHaxeBaseVTable();
    int getScriptVTableOffset();
+   void **getSuperVTable(int inSlot);
+   void freeSuperVTables();
 
    Dynamic getStaticValue(const String &inName,hx::PropertyAccess  inCallProp);
    bool hasStaticValue(const String &inName);
