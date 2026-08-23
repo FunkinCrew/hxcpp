@@ -1696,6 +1696,22 @@ inline void SetVal(String &out, const T &value) { out = String(value); }
 template<typename T>
 inline void SetVal(Dynamic &out, const T &value) { out = value; }
 
+struct SuperVTableSwap
+{
+   void ***location;
+   void **restore;
+
+   SuperVTableSwap(hx::Object *inObj, int inOffset, void **inVTable, void **inSuper)
+   {
+      location = (void ***)((char *)inObj + inOffset);
+      restore = inVTable;
+      *location = inSuper;
+   }
+
+   ~SuperVTableSwap() { *location = restore; }
+};
+
+
 //template<typname RETURN>
 struct CallHaxe : public CppiaExpr
 {
@@ -1705,8 +1721,9 @@ struct CallHaxe : public CppiaExpr
    ExprType returnType;
    bool   isStatic;
    bool   isSuper;
+   int    superSlot;
 
-   CallHaxe(CppiaExpr *inSrc,ScriptNamedFunction inFunction, CppiaExpr *inThis, Expressions &ioArgs, bool inIsStatic=false, bool inIsSuper = false )
+   CallHaxe(CppiaExpr *inSrc,ScriptNamedFunction inFunction, CppiaExpr *inThis, Expressions &ioArgs, bool inIsStatic=false, bool inIsSuper = false, int inSuperSlot = -1 )
        : CppiaExpr(inSrc)
    {
       args.swap(ioArgs);
@@ -1714,6 +1731,34 @@ struct CallHaxe : public CppiaExpr
       function = inFunction;
       isStatic = inIsStatic;
       isSuper = inIsSuper;
+      superSlot = inSuperSlot;
+   }
+
+   void invoke(CppiaCtx *ctx, hx::Object *thisVal)
+   {
+      if (superSlot >= 0 && thisVal)
+      {
+         void **vtable = thisVal->__GetScriptVTable();
+
+         if (vtable)
+         {
+            CppiaClassInfo *info = (CppiaClassInfo *)vtable[-1];
+            void **super = info ? info->getSuperVTable(superSlot) : 0;
+            int offset = info ? info->getScriptVTableOffset() : 0;
+
+            if (super && *(void ***)((char *)thisVal + offset) == vtable)
+            {
+               SuperVTableSwap swap(thisVal, offset, vtable, super);
+               function.execute(ctx);
+               return;
+            }
+         }
+      }
+
+      if (isSuper)
+         function.superExecute(ctx);
+      else
+         function.execute(ctx);
    }
    ExprType getType() HXCPP_OVERRIDE { return returnType; }
    CppiaExpr *link(CppiaModule &inModule) HXCPP_OVERRIDE
@@ -1762,7 +1807,8 @@ struct CallHaxe : public CppiaExpr
    void run(CppiaCtx *ctx,T &outValue)
    {
       unsigned char *pointer = ctx->pointer;
-      ctx->pushObject(isStatic ? 0: thisExpr ? thisExpr->runObject(ctx) : ctx->getThis(false));
+      hx::Object *thisVal = isStatic ? 0: thisExpr ? thisExpr->runObject(ctx) : ctx->getThis(false);
+      ctx->pushObject(thisVal);
       BCR_VCHECK;
 
       const char *s = function.signature+1;
@@ -1783,10 +1829,7 @@ struct CallHaxe : public CppiaExpr
       }
 
       AutoStack a(ctx,pointer);
-      if (isSuper)
-         function.superExecute(ctx);
-      else
-         function.execute(ctx);
+      invoke(ctx, thisVal);
 
       #ifdef DEBUG_RETURN_TYPE
       gLastRet = returnType;
@@ -1851,6 +1894,13 @@ struct CallHaxe : public CppiaExpr
       CATCH_NATIVE
    }
 
+   static void SLJIT_CALL tryCallHaxeSuper( CallHaxe *expr, StackContext *ctx )
+   {
+      TRY_NATIVE
+      expr->invoke(ctx, ctx->getThis(false));
+      CATCH_NATIVE
+   }
+
    void genCode(CppiaCompiler *compiler, const JitVal &inDest,ExprType destType) HXCPP_OVERRIDE
    {
       int framePos = compiler->getCurrentFrameSize();
@@ -1893,8 +1943,15 @@ struct CallHaxe : public CppiaExpr
       // Store new frame in context ...
       compiler->add( sJitCtxFrame, sJitFrame.as(jtPointer), JitVal(framePos) );
 
-      void *func = (void *) ( isSuper ? function.superExecute : function.execute);
-      compiler->callNative( (void *)tryCallHaxe, JitVal(func), sJitCtx );
+      if (superSlot >= 0)
+      {
+         compiler->callNative( (void *)tryCallHaxeSuper, JitVal((void *)this), sJitCtx );
+      }
+      else
+      {
+         void *func = (void *) ( isSuper ? function.superExecute : function.execute);
+         compiler->callNative( (void *)tryCallHaxe, JitVal(func), sJitCtx );
+      }
 
       genFunctionResult(compiler, inDest, destType, returnType, isBoolInt());
    }
@@ -3356,11 +3413,15 @@ struct CallMember : public CppiaExpr
          ScriptNamedFunction func = type->haxeBase->findFunction(field.utf8_str());
          if (func.signature)
          {
-            if (callSuperField && !func.superExecute)
+            int superSlot = -1;
+            if (callSuperField && inModule.linkingClass)
+               superSlot = inModule.linkingClass->findFunctionSlot(fieldId);
+
+            if (callSuperField && superSlot < 0 && !func.superExecute)
                CPPIALOG("Warning - calling super host '%s' from cppia can lead to infinte recursion\n", field.utf8_str());
 
             //CPPIALOG(" found function %s\n", func.signature );
-            replace = new CallHaxe( this, func, thisExpr, args, false, callSuperField && func.superExecute);
+            replace = new CallHaxe( this, func, thisExpr, args, false, callSuperField && func.superExecute, superSlot);
          }
       }
 
