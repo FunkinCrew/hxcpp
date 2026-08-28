@@ -2036,6 +2036,18 @@ struct CallStatic : public CppiaExpr
 
 
 #ifdef CPPIA_JIT
+static hx::Object *unloadedException = 0;
+void genUnloadedSlotCheck(CppiaCompiler *compiler, const JitVal &reg)
+{
+   if (!unloadedException)
+      unloadedException = sUnloadedMessage.makePermanentObject();
+
+   JumpId loaded = compiler->compare(cmpP_NOT_EQUAL, reg.as(jtPointer), (void *)0);
+   compiler->move( sJitCtx.star(jtPointer, offsetof(hx::StackContext,exception)), (void *)unloadedException );
+   compiler->addThrow();
+   compiler->comeFrom(loaded);
+}
+
 static hx::Object *nullException = 0;
 void genNullReferenceExceptionCheck(CppiaCompiler *compiler, const JitVal &reg)
 {
@@ -2233,6 +2245,7 @@ struct CallMemberVTable : public CppiaExpr
       ScriptCallable **vtable = (!isInterfaceCall ? (*(ScriptCallable ***)((char *)thisVal +scriptVTableOffset)) : (ScriptCallable **) thisVal->__GetScriptVTable()); \
       unsigned char *pointer = ctx->pointer; \
       ScriptCallable *func = vtable[slot]; \
+      if (!func) hx::Throw( sUnloadedMessage ); \
       func->pushArgs(ctx, thisVal, args); \
       /* TODO */; \
       AutoStack save(ctx,pointer);
@@ -2318,6 +2331,8 @@ struct CallMemberVTable : public CppiaExpr
 
       // sJitTemp1 = table[slot]
       compiler->move(sJitTemp1, sJitTemp1.star(jtPointer, slot*sizeof(void *)) );
+
+      genUnloadedSlotCheck(compiler, sJitTemp1);
 
       // Implementation may return a more general type, with different byte representation
       if (checkInterfaceReturnType)

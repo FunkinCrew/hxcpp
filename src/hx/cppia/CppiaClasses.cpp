@@ -346,6 +346,7 @@ CppiaClassInfo::CppiaClassInfo(CppiaModule &inCppia) : cppia(inCppia)
    isInterface = false;
    interfaceSlotSize = 0;
    vtableSlotCount = 0;
+   hostVTableSlots = 0;
    unloaded = false;
    superType = 0;
    typeId = 0;
@@ -732,9 +733,9 @@ void CppiaClassInfo::deactivate()
 
    if (vtable)
    {
-      void **base = vtable - interfaceSlotSize - 1;
-      int count = vtableSlotCount + 2 + interfaceSlotSize;
-      memset(base, 0, sizeof(void *)*count);
+      for(int i=0;i<hostVTableSlots && i<vtableSlotCount;i++)
+         vtable[i] = 0;
+
       vtable[-1] = this;
    }
 
@@ -1171,6 +1172,7 @@ void CppiaClassInfo::linkTypes()
 
 
    int vtableSlot = table.size();
+   hostVTableSlots = vtableSlot;
    for(int i=0;i<memberFunctions.size();i++)
    {
       int idx = -1;

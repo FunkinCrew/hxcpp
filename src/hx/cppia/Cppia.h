@@ -152,6 +152,7 @@ extern int gArrayArgCount[];
 typedef std::map<int,CppiaStackVar *> CppiaStackVarMap;
 
 extern String sInvalidArgCount;
+extern String sUnloadedMessage;
 
 void _hx_cppia_track_expr(void *inExpr);
 void _hx_cppia_untrack_expr(void *inExpr);
@@ -674,6 +675,7 @@ public:
    int       dynamicMapOffset;
    int       interfaceSlotSize;
    int       vtableSlotCount;
+   int       hostVTableSlots;
    bool      unloaded;
    void      **vtable;
    std::vector<void **> superVtables;
