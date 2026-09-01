@@ -729,8 +729,6 @@ void CppiaClassInfo::deactivate()
       return;
    unloaded = true;
 
-   freeSuperVTables();
-
    if (vtable)
    {
       for(int i=0;i<hostVTableSlots && i<vtableSlotCount;i++)
