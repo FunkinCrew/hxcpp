@@ -78,19 +78,14 @@ void CppiaModule::unload()
       if (classes[i])
          classes[i]->deactivate();
 
-   markable.clear();
    main = 0;
 
-   std::vector<CppiaExpr *> toFree(allExprs.begin(), allExprs.end());
-   allExprs.clear();
-
-   for(int i=0;i<toFree.size();i++)
+   for(hx::UnorderedSet<CppiaExpr *>::iterator i = allExprs.begin(); i != allExprs.end(); ++i)
    {
-      ScriptCallable *callable = dynamic_cast<ScriptCallable *>(toFree[i]);
+      ScriptCallable *callable = dynamic_cast<ScriptCallable *>(*i);
+      // ends up not freeing the module totally, we do suffer a cost. But it's small.
       if (callable)
          callable->deactivate();
-      else
-         delete toFree[i];
    }
 }
 
