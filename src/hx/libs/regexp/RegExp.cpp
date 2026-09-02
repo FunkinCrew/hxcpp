@@ -1,5 +1,6 @@
 #include <hxcpp.h>
 #include <string.h>
+#include <hx/Thread.h>
 
 #define PCRE2_STATIC
 #define PCRE2_CODE_UNIT_WIDTH 0
@@ -32,6 +33,8 @@ struct pcredata : public hx::Object
    unsigned int flags;
    String string;
    String expr;
+
+   HxMutex mutex;
 
    void create8(pcre2_code_8 *inR, String inExpr, int inFlags)
    {
@@ -75,6 +78,7 @@ struct pcredata : public hx::Object
 
    bool run(String string,int pos,int len)
    {
+      mutex.Lock();
       #ifdef HX_SMART_STRINGS
       if (string.isUTF16Encoded())
       {
@@ -110,16 +114,25 @@ struct pcredata : public hx::Object
       }
 
       #endif
-      return pcre2_match_8(rUtf8,(PCRE2_SPTR8)string.utf8_str(),pos+len,pos,PCRE2_NO_UTF_CHECK,match_data8,NULL) >= 0;
+      bool result = pcre2_match_8(rUtf8,(PCRE2_SPTR8)string.utf8_str(),pos+len,pos,PCRE2_NO_UTF_CHECK,match_data8,NULL) >= 0;
+      mutex.Unlock();
+      return result;
    }
 
    size_t* get_matches() {
+      size_t* result;
+      mutex.Lock();
       #ifdef HX_SMART_STRINGS
       if (string.isUTF16Encoded()) {
-         return pcre2_get_ovector_pointer_16(match_data16);
+         result = pcre2_get_ovector_pointer_16(match_data16);
       }
+      else
       #endif
-      return pcre2_get_ovector_pointer_8(match_data8);
+      {
+         result = pcre2_get_ovector_pointer_8(match_data8);
+      }
+      mutex.Unlock();
+      return result;
    }
 
    void destroy()
