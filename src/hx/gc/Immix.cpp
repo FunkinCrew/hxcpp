@@ -402,6 +402,10 @@ enum LocalAllocState { lasNew, lasRunning, lasStopped, lasWaiting, lasTerminal }
 
 
 static void MarkLocalAlloc(LocalAllocator *inAlloc,hx::MarkContext *__inCtx);
+
+#if defined(HXCPP_SCRIPTABLE) && defined(HXCPP_GC_GENERATIONAL)
+namespace hx { void MarkCppiaStatics(hx::MarkContext *__inCtx); }
+#endif
 #ifdef HXCPP_VISIT_ALLOCS
 static void VisitLocalAlloc(LocalAllocator *inAlloc,hx::VisitContext *__inCtx);
 #endif
@@ -4702,6 +4706,11 @@ public:
       mMarker.init();
 
       hx::MarkClassStatics(&mMarker);
+
+      #if defined(HXCPP_SCRIPTABLE) && defined(HXCPP_GC_GENERATIONAL)
+      if (inGenerational)
+         hx::MarkCppiaStatics(&mMarker);
+      #endif
 
       {
       hx::AutoMarkPush info(&mMarker,"Roots","root");
