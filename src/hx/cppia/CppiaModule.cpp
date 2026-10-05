@@ -16,6 +16,21 @@ int sgNativeNameSlotCount = 0;
 
 Array<Dynamic> gAllCppiaModules;
 
+#ifdef HXCPP_GC_GENERATIONAL
+void MarkCppiaStatics(hx::MarkContext *__inCtx)
+{
+   if (!gAllCppiaModules.mPtr)
+      return;
+
+   for(int i=0;i<gAllCppiaModules->length;i++)
+   {
+      hx::Object *module = gAllCppiaModules[i].mPtr;
+      if (module)
+         module->__Mark(__inCtx);
+   }
+}
+#endif
+
 static CppiaModule *sLoadingModule = 0;
 
 void _hx_cppia_track_expr(void *inExpr)

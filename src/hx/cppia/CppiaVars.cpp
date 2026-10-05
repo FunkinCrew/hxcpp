@@ -188,6 +188,7 @@ void CppiaVar::linkVarTypes(CppiaModule &cppia, int &ioOffset)
 void CppiaVar::createDynamic(hx::Object *inBase)
 {
    *(hx::Object **)((char *)inBase+offset) = createMemberClosure(inBase,(ScriptCallable*)dynamicFunction->funExpr);
+   HX_OBJ_WB_GET(inBase, *(hx::Object **)((char *)inBase+offset));
 }
 
 
@@ -219,7 +220,10 @@ Dynamic CppiaVar::setValue(hx::Object *inThis, Dynamic inValue)
       case fsInt: *(int *)(base) = inValue; return inValue;
       case fsBool: *(bool *)(base) = inValue; return inValue;
       case fsFloat: *(Float *)(base) = inValue; return inValue;
-      case fsString: *(String *)(base) = inValue; return inValue;
+      case fsString:
+         *(String *)(base) = inValue;
+         HX_OBJ_WB_GET(inThis, (void *)((String *)(base))->raw_ptr());
+         return inValue;
       case fsObject:
             switch(type->arrayType)
             {
@@ -251,6 +255,7 @@ Dynamic CppiaVar::setValue(hx::Object *inThis, Dynamic inValue)
                   *(Array<Dynamic> *)(base) = inValue;
                   break;
             }
+            HX_OBJ_WB_GET(inThis, *(hx::Object **)(base));
             return inValue;
       case fsUnknown:
          break;
