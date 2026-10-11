@@ -11,6 +11,8 @@ namespace hx
 
 static int sScriptId = 0;
 
+CppiaModule::InterfaceSlots CppiaModule::interfaceSlots;
+
 
 const char **sgNativeNameSlots = 0;
 int sgNativeNameSlotCount = 0;
@@ -61,7 +63,7 @@ CppiaModule::CppiaModule()
    scriptId = ++sScriptId;
    unloaded = false;
    strings = Array_obj<String>::__new(0,0);
-   if (sgNativeNameSlotCount>0)
+   if (sgNativeNameSlotCount>0 && interfaceSlots.empty())
       for(int i=2;i<sgNativeNameSlotCount;i++)
          interfaceSlots[sgNativeNameSlots[i]] = i;
 
@@ -237,7 +239,10 @@ int CppiaModule::getInterfaceSlot(const std::string &inName)
    InterfaceSlots::iterator it = interfaceSlots.find(inName);
    if (it==interfaceSlots.end())
    {
-      int result = interfaceSlots.size()+1;
+      int result = 1;
+      for(InterfaceSlots::iterator used = interfaceSlots.begin(); used!=interfaceSlots.end(); ++used)
+         if (used->second >= result)
+            result = used->second + 1;
       interfaceSlots[inName] = result;
       return result;
    }
