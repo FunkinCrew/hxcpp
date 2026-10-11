@@ -61,6 +61,7 @@ void CppiaVar::clear()
    typeId = 0;
    offset = 0;
    type = 0;
+   owner = 0;
    objVal.mPtr = 0;
    intVal = 0;
    stringVal = String();
@@ -86,6 +87,10 @@ void CppiaVar::load(CppiaStream &stream)
 // Static...
 void CppiaVar::linkVarTypes(CppiaModule &cppia)
 {
+   if (owner && owner!=&cppia)
+      return;
+   owner = &cppia;
+
    if (dynamicFunction)
    {
       nameId = dynamicFunction->nameId;
@@ -168,6 +173,11 @@ CppiaExpr *CppiaVar::createAccess(CppiaExpr *inSrc)
 void CppiaVar::linkVarTypes(CppiaModule &cppia, int &ioOffset)
 {
    DBGLOG("linkVarTypes %p\n",dynamicFunction);
+   if (owner && owner!=&cppia)
+      return;
+   owner = &cppia;
+   name = cppia.strings[dynamicFunction ? dynamicFunction->nameId : nameId];
+
    if (dynamicFunction)
    {
       //dynamicFunction->linkTypes(cppia);
@@ -274,6 +284,10 @@ Dynamic CppiaVar::setValue(hx::Object *inThis, Dynamic inValue)
 
 void CppiaVar::link(CppiaModule &inModule)
 {
+   // Inherited from a class of another module.
+   if (owner && owner!=&inModule)
+      return;
+
    if (dynamicFunction)
       dynamicFunction->link();
    type = inModule.types[typeId];

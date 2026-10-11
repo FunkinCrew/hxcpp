@@ -400,7 +400,7 @@ public:
    hx::UnorderedSet<int>           allFileIds;
 
    typedef std::map< std::string, int > InterfaceSlots;
-   InterfaceSlots                  interfaceSlots;
+   static InterfaceSlots           interfaceSlots;
 
    StackLayout                     *layout;
    CppiaClassInfo                  *linkingClass;
@@ -542,6 +542,8 @@ struct CppiaVar
    int              typeId;
    int              offset;
    String           name;
+   // If using live modules, this is the module that owns this variable.
+   CppiaModule      *owner;
    FieldStorage     storeType;
    CppiaFunction    *dynamicFunction;
    ExprType         exprType;
@@ -745,7 +747,7 @@ public:
    int __GetType();
    int getEnumIndex(String inName);
    bool implementsInterface(CppiaClassInfo *inInterface);
-   ScriptCallable *findFunction(bool inStatic,int inId);
+   ScriptCallable *findFunction(bool inStatic,int inId, CppiaModule &inFrom);
    ScriptCallable *findInterfaceFunction(const std::string &inName);
    ScriptCallable *findFunction(bool inStatic, const String &inName);
    ScriptCallable *findFunction(FunctionMap &inMap,const String &inName);
@@ -757,11 +759,12 @@ public:
       { return findFunction(staticGetters,inName); }
    inline ScriptCallable *findStaticSetter(const String &inName)
       { return findFunction(staticSetters,inName); }
-   CppiaEnumConstructor *findEnum(int inFieldId);
+   CppiaEnumConstructor *findEnum(int inFieldId, CppiaModule &inFrom);
    ExprType findFunctionType(CppiaModule &inModule, int inName);
-   CppiaFunction *findVTableFunction(int inId);
-   int findFunctionSlot(int inName);
-   CppiaVar *findVar(bool inStatic,int inId);
+   CppiaFunction *findVTableFunction(int inId, CppiaModule &inFrom);
+   int findFunctionSlot(int inName, CppiaModule &inFrom);
+   CppiaVar *findVar(bool inStatic,int inId, CppiaModule &inFrom);
+   int importType(CppiaModule &inFrom, int inTypeId);
 
    void *getHaxeBaseVTable();
    int getScriptVTableOffset();

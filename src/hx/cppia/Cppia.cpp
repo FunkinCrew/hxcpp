@@ -39,6 +39,7 @@ static bool isNumeric(ExprType t) { return t==etInt || t==etFloat; }
 void cppiaClassMark(CppiaClassInfo *inClass,hx::MarkContext *__inCtx);
 void cppiaClassVisit(CppiaClassInfo *inClass,hx::VisitContext *__inCtx);
 int getScriptId(hx::Class inClass);
+CppiaClassInfo *getLiveCppiaClass(hx::Class inClass);
 
 #ifndef __has_builtin
 #define __has_builtin(x) 0
@@ -1984,7 +1985,7 @@ struct CallStatic : public CppiaExpr
       CppiaExpr *replace = 0;
       if (type->cppiaClass)
       {
-         ScriptCallable *func = (ScriptCallable *)type->cppiaClass->findFunction(true,fieldId);
+         ScriptCallable *func = (ScriptCallable *)type->cppiaClass->findFunction(true,fieldId,inModule);
          if (!func)
          {
             CPPIALOG("Could not find static function %s in %s\n", field.out_str(), type->name.out_str());
@@ -2230,7 +2231,7 @@ struct CallMemberVTable : public CppiaExpr
          thisExpr = thisExpr->link(inModule);
       LinkExpressions(args,inModule);
 
-      TypeData *type = inModule.types[funcProto->returnType];
+      TypeData *type = funcProto->cppia.types[funcProto->returnType];
       // These types may have natively been returned as ints or non-objects
       checkInterfaceReturnType = isInterfaceCall && (returnType==etFloat || type->isDynamic);
 
@@ -2999,7 +3000,7 @@ struct GetFieldByName : public CppiaDynamicExpr
       TypeData *type = inModule.types[classId];
       if (!isStatic && type->cppiaClass)
       {
-         vtableSlot  = type->cppiaClass->findFunctionSlot(nameId);
+         vtableSlot  = type->cppiaClass->findFunctionSlot(nameId,inModule);
          isInterface = type->cppiaClass->isInterface;
          name = inModule.strings[nameId];
       }
@@ -3007,7 +3008,7 @@ struct GetFieldByName : public CppiaDynamicExpr
       {
          if (type->cppiaClass)
          {
-            CppiaVar *var = type->cppiaClass->findVar(true,nameId);
+            CppiaVar *var = type->cppiaClass->findVar(true,nameId,inModule);
             if (var)
             {
                CppiaExpr *replace = var->createAccess(this);
@@ -3018,7 +3019,7 @@ struct GetFieldByName : public CppiaDynamicExpr
                return replace;
             }
 
-            CppiaExpr *func = type->cppiaClass->findFunction(true,nameId);
+            CppiaExpr *func = type->cppiaClass->findFunction(true,nameId,inModule);
             if (func)
             {
                CppiaExprWithValue *replace = new CppiaExprWithValue(this);
@@ -3393,18 +3394,18 @@ struct CallMember : public CppiaExpr
          if (callSuperField)
          {
             // Bind now ...
-            ScriptCallable *func = (ScriptCallable *)type->cppiaClass->findFunction(false, fieldId) ;
+            ScriptCallable *func = (ScriptCallable *)type->cppiaClass->findFunction(false, fieldId, inModule) ;
             if (func)
                replace = new CallFunExpr( this, thisExpr, func, args, true );
          }
          else
          {
-            int vtableSlot = type->cppiaClass->findFunctionSlot(fieldId);
+            int vtableSlot = type->cppiaClass->findFunctionSlot(fieldId,inModule);
 
             //CPPIALOG("   vslot %d\n", vtableSlot);
             if (vtableSlot!=-1)
             {
-               CppiaFunction *funcProto = type->cppiaClass->findVTableFunction(fieldId);
+               CppiaFunction *funcProto = type->cppiaClass->findVTableFunction(fieldId,inModule);
                int scriptPos = type->cppiaClass->getScriptVTableOffset();
                replace = new CallMemberVTable( this, thisExpr, vtableSlot, scriptPos, funcProto, type->cppiaClass->isInterface, args );
             }
@@ -3432,7 +3433,7 @@ struct CallMember : public CppiaExpr
          {
             int superSlot = -1;
             if (callSuperField && inModule.linkingClass)
-               superSlot = inModule.linkingClass->findFunctionSlot(fieldId);
+               superSlot = inModule.linkingClass->findFunctionSlot(fieldId,inModule);
 
             if (callSuperField && superSlot < 0 && !func.superExecute)
                CPPIALOG("Warning - calling super host '%s' from cppia can lead to infinte recursion\n", field.utf8_str());
@@ -4703,7 +4704,7 @@ struct GetFieldByLinkage : public CppiaExpr
 
       if (!offset && type->cppiaClass)
       {
-         CppiaVar *var = type->cppiaClass->findVar(false, fieldId);
+         CppiaVar *var = type->cppiaClass->findVar(false, fieldId, inModule);
          if (var)
          {
             offset = var->offset;
@@ -8207,13 +8208,28 @@ void TypeData::link(CppiaModule &inModule)
      cppiaSuperType->link(inModule);
    }
 
+   // Set when the type is a class of another module that is still loaded.
+   CppiaClassInfo *foreign = 0;
+
    if (name.length>0)
    {
       haxeClass = hx::Class_obj::Resolve(name);
       int scriptId = getScriptId(haxeClass);
       if (scriptId>0 && scriptId!=inModule.scriptId)
       {
-         DBGLOG("Reference to old script %s - ignoring\n", haxeClass.mPtr->mName.out_str());
+         // if its not in our module, try to live load it from all other modules
+         if (!cppiaClass)
+            foreign = getLiveCppiaClass(haxeClass);
+
+         if (foreign)
+         {
+            DBGLOG("Class %s comes from another module\n", haxeClass.mPtr->mName.out_str());
+            cppiaClass = foreign;
+         }
+         else
+         {
+            DBGLOG("Reference to old script %s - ignoring\n", haxeClass.mPtr->mName.out_str());
+         }
          haxeClass.mPtr = 0;
       }
       DBGLOG("Link %s, haxe=%s\n", name.out_str(), haxeClass.mPtr ? haxeClass.mPtr->mName.out_str() : "?" );
@@ -8269,6 +8285,11 @@ void TypeData::link(CppiaModule &inModule)
          }
 
          DBGLOG("array type %d\n",arrayType);
+      }
+      else if (foreign)
+      {
+         haxeBase = foreign->haxeBase;
+         haxeClass.mPtr = foreign->type ? foreign->type->haxeClass.mPtr : 0;
       }
       else if (!haxeClass.mPtr && cppiaSuperType)
       {
