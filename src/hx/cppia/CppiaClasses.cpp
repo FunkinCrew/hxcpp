@@ -212,7 +212,7 @@ struct EnumField : public CppiaDynamicExpr
       if (type->cppiaClass)
       {
          if (!type->cppiaClass->isEnum)
-            throw "Field of non-enum";
+            throw cppiaExprError(this, "%s.%s is used as an enum value, but %s is not an enum", type->name.out_str(), inModule.strings[fieldId].out_str(), type->name.out_str());
          value = type->cppiaClass->findEnum(fieldId);
       }
       else
@@ -221,7 +221,7 @@ struct EnumField : public CppiaDynamicExpr
          if (!enumClass.mPtr)
          {
             printf("Could not find enum %s\n", type->name.out_str() );
-            throw "Bad enum";
+            throw cppiaExprError(this, "Bad link: enum %s does not exist in this context. The script might've been compiled against a different version.", type->name.out_str());
          }
          enumName = inModule.strings[fieldId];
          inModule.markable.push_back(this);
@@ -813,7 +813,7 @@ bool CppiaClassInfo::load(CppiaStream &inStream)
    else
    {
       DBGLOG("Invalid class field op %d\n", op);
-      throw "Bad class type";
+      throw cppiaError("Expected a class, interface or enum definition but found opcode %d", (int)op);
    }
 
    std::string tok;
@@ -908,7 +908,7 @@ bool CppiaClassInfo::load(CppiaStream &inStream)
              // OK
           }
           else
-             throw "unknown field type";
+             throw cppiaError("Unknown field type '%.32s' in %s. The script might've been compiled against a different version.", tok.c_str(), name.c_str());
        }
     }
     if (isEnum)
@@ -928,13 +928,13 @@ hx::Class *CppiaClassInfo::getSuperClass()
 
    TypeData *superType = cppia.types[ superId ];
    if (!superType)
-      throw "Unknown super type!";
+      throw cppiaError("%s has an invalid super class (type id %d)", name.c_str(), superId);
    if (superType->cppiaClass)
       return &superType->cppiaClass->mClass;
    if (!superType->haxeClass.mPtr)
    {
       printf("Invalid super class '%s' for '%s'.\n", superType->name.c_str(), name.c_str());
-      throw "Missing super class";
+      throw cppiaError("Bad link: %s extends %s, which does not exist in this context. The script might've been compiled against a different version.", name.c_str(), superType->name.out_str());
    }
 
    return &superType->haxeClass;
@@ -1032,7 +1032,7 @@ void CppiaClassInfo::linkTypes()
 
    haxeBase = type->haxeBase;
    if (!haxeBase && !isInterface)
-      throw "No base defined for non-interface";
+      throw cppiaError("Bad link: no native base class was found for %s, so it can not be created", name.c_str());
 
    classSize = haxeBase ? haxeBase->mDataOffset : 0;
 
@@ -1193,7 +1193,7 @@ void CppiaClassInfo::linkTypes()
          {
             idx = cppia.getInterfaceSlot(memberFunctions[i]->name);
             if (idx==-1)
-               throw "Missing function in interface";
+               throw cppiaError("Bad link: interface %s declares function %s, which has no interface slot", name.c_str(), memberFunctions[i]->name.c_str());
             if (idx>interfaceSlotSize)
                interfaceSlotSize = idx;
             idx = -idx;

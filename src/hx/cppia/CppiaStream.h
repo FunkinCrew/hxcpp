@@ -40,7 +40,7 @@ struct CppiaStream
          {
             OpName &name = names[i];
             if (!tokenMap[name.id].empty())
-               throw "Double identifier";
+               throw cppiaError("Opcode id %d is defined twice (%s and %s)", name.id, tokenMap[name.id].c_str(), name.name);
             tokenMap[ name.id ] = name.name;
          }
       }
@@ -79,7 +79,7 @@ struct CppiaStream
    void skipChar()
    {
       if (data>=max)
-         throw "EOF";
+         throw "Unexpected end of file, the script is truncated or corrupt";
       if (*data=='\n')
       {
          line++;
@@ -109,7 +109,7 @@ struct CppiaStream
       std::string tok = getAsciiToken();
       CppiaOp result = (CppiaOp)opMap[tok];
       if (result==0)
-         throw "Unknown token";
+         throw cppiaError("Unknown opcode '%.32s'. The script might've been compiled against a different version.", tok.c_str());
       return result;
    }
 
@@ -136,7 +136,7 @@ struct CppiaStream
          {
             int digit = *data - '0';
             if (digit<0 || digit>9)
-               throw "expected digit";
+               throw cppiaError("Expected a number but found '%c' (0x%02x), the script is corrupt", *data, (unsigned char)*data);
             result = result * 10 + digit;
          }
          pos++;
@@ -178,7 +178,7 @@ struct CppiaStream
    {
       int ival = getInt();
       if (ival>1)
-         throw "invalid bool";
+         throw cppiaError("Expected a bool (0 or 1) but found %d, the script is corrupt", ival);
       return ival;
    }
    bool getStatic()
@@ -202,7 +202,7 @@ struct CppiaStream
    void readBytes(unsigned char *outBytes, int inLen)
    {
       if (data+inLen>max)
-         throw "EOF";
+         throw cppiaError("Unexpected end of file while reading %d bytes of resource data, only %d remain", inLen, (int)(max-data));
       memcpy(outBytes, data, inLen);
       data+=inLen;
    }

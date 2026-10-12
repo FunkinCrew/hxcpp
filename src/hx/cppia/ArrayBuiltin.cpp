@@ -989,7 +989,7 @@ struct ArrayBuiltin : public ArrayBuiltinBase
       
             default: ;
                printf("make setter %d\n", op);
-               throw "setter not implemented";
+               throw cppiaExprError(this, "Unknown array assignment operator %d", (int)op);
          }
 
          delete this;
@@ -1955,7 +1955,7 @@ template<int BUILTIN,typename CREMENT>
 CppiaExpr *TCreateArrayBuiltin(CppiaExpr *inSrc, ArrayType inType, CppiaExpr *thisExpr, Expressions &args, bool inUnsafe = false)
 {
    if (gArrayArgCount[BUILTIN]!=args.size())
-      throw "Bad arg count for array builtin";
+      throw cppiaExprError(inSrc, "Array function takes %d arguments but the script passes %d", (int)gArrayArgCount[BUILTIN], (int)args.size());
 
    switch(inType)
    {
@@ -1976,7 +1976,7 @@ CppiaExpr *TCreateArrayBuiltin(CppiaExpr *inSrc, ArrayType inType, CppiaExpr *th
       default:
          break;
    }
-   throw "Unknown array type";
+   throw cppiaExprError(inSrc, "Unknown array type %d", (int)inType);
    return 0;
 }
 
