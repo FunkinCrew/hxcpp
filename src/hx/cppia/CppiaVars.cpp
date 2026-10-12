@@ -108,7 +108,7 @@ void CppiaVar::linkVarTypes(CppiaModule &cppia)
          case fsObject: valPointer = &objVal; break;
          default:
             valPointer = 0;
-            throw "Unkown store type";
+            throw cppiaError("Variable %s has an unknown storage type %d", cppia.strings[nameId].out_str(), (int)storeType);
       }
    }
 }
@@ -160,7 +160,7 @@ CppiaExpr *CppiaVar::createAccess(CppiaExpr *inSrc)
    if (valPointer)
       return createStaticAccess(inSrc, storeType, valPointer);
    if (isVirtual)
-      throw "Direct access to extern field";
+      throw cppiaExprError(inSrc, "Extern field %s can not be accessed directly", name.out_str());
    //throw "Unlinked static variable";
    return 0;
 }
@@ -288,7 +288,7 @@ CppiaVar::Access CppiaVar::getAccess(CppiaStream &stream)
 {
    std::string tok = stream.getToken();
    if (tok.size()!=1)
-      throw "bad var access length";
+      throw cppiaError("Expected a one letter variable access code (N, n, R, C or V) but found '%.32s'", tok.c_str());
    switch(tok[0])
    {
       case 'N': return accNormal;
@@ -297,7 +297,7 @@ CppiaVar::Access CppiaVar::getAccess(CppiaStream &stream)
       case 'C': return accCall;
       case 'V': return accCallNative;
    }
-   throw "bad access code";
+   throw cppiaError("Unknown variable access code '%c', expected N, n, R, C or V", tok[0]);
    return accNormal;
 }
 

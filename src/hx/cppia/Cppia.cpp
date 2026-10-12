@@ -1115,7 +1115,7 @@ struct SetExpr : public CppiaExpr
       {
          CPPIALOG("Could not makeSetter.\n");
          inModule.where(lvalue);
-         throw "Bad Set expr";
+         throw cppiaExprError(lvalue, "Can not assign to this expression (%s)", lvalue->getName());
       }
       delete this;
       return result;
@@ -1262,7 +1262,7 @@ struct CastExpr : public CppiaDynamicExpr
          if (arrayType==arrNotArray)
          {
             CPPIALOG("Cast to %d, %s\n", typeId, t->name.out_str());
-            throw "Data cast to non-array";
+            throw cppiaExprError(this, "Can not cast to %s as a data array, it is not an array type", t->name.out_str());
          }
       }
       else if (op==castDynArray)
@@ -1764,7 +1764,8 @@ struct CallHaxe : public CppiaExpr
    CppiaExpr *link(CppiaModule &inModule) HXCPP_OVERRIDE
    {
       if (strlen(function.signature) != args.size()+1)
-         throw "CallHaxe: Invalid arg count";
+         throw cppiaExprError(this, "Bad link: native function %s takes %d arguments in this context but the script passes %d. The script might've been compiled against a different version.",
+            function.name ? function.name : "?", (int)strlen(function.signature)-1, (int)args.size());
       for(int i=0;i<args.size()+1;i++)
       {
          switch(function.signature[i])
@@ -1776,7 +1777,8 @@ struct CallHaxe : public CppiaExpr
                   break;
                // fallthough
             default:
-               throw "Bad haxe signature";
+               throw cppiaExprError(this, "Native function %s has an unsupported type '%c' in its signature \"%s\"",
+                  function.name ? function.name : "?", function.signature[i], function.signature);
          }
       }
       switch(function.signature[0])
@@ -2029,7 +2031,7 @@ struct CallStatic : public CppiaExpr
 
       CPPIALOG("Unknown static call to %s::%s (%d)\n", type->name.out_str(), field.out_str(), type->cppiaClass!=0);
       inModule.where(this);
-      throw "Bad link";
+      throw inModule.linkError(this, "static function", type->name.out_str(), field.out_str());
       return this;
    }
 };
@@ -3010,7 +3012,7 @@ struct GetFieldByName : public CppiaDynamicExpr
             {
                CppiaExpr *replace = var->createAccess(this);
                if (!replace)
-                  throw "Bad replace";
+                  throw cppiaExprError(this, "Bad link: static field %s.%s has no storage and can not be accessed", type->name.out_str(), inModule.strings[nameId].out_str());
                replace->link(inModule);
                delete this;
                return replace;
@@ -3034,7 +3036,7 @@ struct GetFieldByName : public CppiaDynamicExpr
             if (type->cppiaClass)
                type->cppiaClass->dump();
             CPPIALOG("Could not link static %s::%s (%d)\n", type->name.c_str(), inModule.strings[nameId].out_str(), nameId );
-            throw "Bad link";
+            throw inModule.linkError(this, "static field", type->name.out_str(), inModule.strings[nameId].out_str());
          }
          name = inModule.strings[nameId];
          const StaticInfo *info = staticClass->GetStaticStorage(name);
@@ -3341,7 +3343,7 @@ struct CallMember : public CppiaExpr
       if (!superReg)
       {
          CPPIALOG("No class registered for %s\n", type->name.out_str());
-         throw "Unknown super call";
+         throw cppiaExprError(this, "Bad link: super class %s can not be extended by scripts in this context. The script might've been compiled against a different version.", type->name.out_str());
       }
       if (!superReg->construct.execute)
       {
@@ -3380,7 +3382,7 @@ struct CallMember : public CppiaExpr
             {
                CPPIALOG("Bad array field '%s'\n", field.out_str());
                inModule.where(this);
-               throw "Unknown array field name";
+               throw cppiaExprError(this, "Bad link: %s has no function '%s'. The script might've been compiled against a different version.", type->name.out_str(), field.out_str());
             }
          }
       }
@@ -4182,7 +4184,7 @@ CppiaExpr *MemReference<T,REFMODE>::makeSetter(AssignOp op,CppiaExpr *value)
          return new MemReferenceSetter<T,REFMODE,AssignMod>(this,value,op);
       default: ;
    }
-   throw "Bad assign op";
+   throw cppiaExprError(this, "Unknown assignment operator %d", (int)op);
    return 0;
 }
 
@@ -4515,7 +4517,7 @@ CppiaExpr *MemReference<T,REFMODE>::makeCrement(CrementOp inOp)
       default:
          break;
    }
-   throw "bad crement op";
+   throw cppiaExprError(this, "Unknown increment operator %d", (int)inOp);
    return 0;
 }
 
@@ -5080,7 +5082,7 @@ struct ArrayDef : public CppiaDynamicExpr
       if (!arrayType)
       {
          CPPIALOG("ArrayDef of non array-type %s\n", type->name.out_str());
-         throw "Bad ArrayDef";
+         throw cppiaExprError(this, "Array literal has type %s, which is not an array type", type->name.out_str());
       }
       LinkExpressions(items,inModule);
       return this;
@@ -5644,26 +5646,26 @@ struct ArrayAccessI : public CppiaDynamicExpr
       TypeData *type = inModule.types[classId];
       // TODO - not always cppiaClass
       if (type->cppiaClass)
-         throw "ArrayAccess interface can't be implemented in cppia";
+         throw cppiaExprError(this, "%s is a script class, the ArrayAccess interface can not be implemented in cppia", type->name.out_str());
 
       __get = type->haxeBase->findFunction("__get");
       if (!__get.execute)
       {
          CPPIALOG("Class %s missing __get\n", type->name.out_str());
-         throw "Bad array access - __get";
+         throw cppiaExprError(this, "Bad link: %s is indexed like an array but has no __get function in this context", type->name.out_str());
       }
       __set = type->haxeBase->findFunction("__set");
       if (!__set.execute)
       {
          CPPIALOG("Class %s missing __set\n", type->name.out_str());
-         throw "Bad array access - __set";
+         throw cppiaExprError(this, "Bad link: %s is indexed like an array but has no __set function in this context", type->name.out_str());
       }
 
       if (__get.signature[1]!='i' || __set.signature[1]!='i')
-         throw "__get/__set should take an int";
+         throw cppiaExprError(this, "%s.__get and %s.__set must take an Int index (signatures \"%s\" and \"%s\")", type->name.out_str(), type->name.out_str(), __get.signature, __set.signature);
 
       if (__get.signature[0]!=__set.signature[2])
-         throw "Mismatch __get/__set array access";
+         throw cppiaExprError(this, "%s.__get returns a different type than %s.__set takes (signatures \"%s\" and \"%s\")", type->name.out_str(), type->name.out_str(), __get.signature, __set.signature);
 
       switch(__get.signature[0])
       {
@@ -5673,7 +5675,7 @@ struct ArrayAccessI : public CppiaDynamicExpr
          case sigFloat: accessType = etFloat; break;
          case sigString: accessType = etString; break;
          case sigObject: accessType = etObject; break;
-         default: throw "Bad signature on __get";
+         default: throw cppiaExprError(this, "%s.__get has an unsupported return type in its signature \"%s\"", type->name.out_str(), __get.signature);
       }
 
       if (value)
@@ -5816,14 +5818,14 @@ struct ArrayAccessI : public CppiaDynamicExpr
    CppiaExpr  *makeSetter(AssignOp op,CppiaExpr *inValue) HXCPP_OVERRIDE
    {
       if (op!=aoSet)
-         throw "TODO - arrayAccess undefined setter";
+         throw cppiaExprError(this, "Compound assignment (+=, -=, ...) on an ArrayAccess class is not supported in cppia");
       assign = op;
       value = inValue;
       return this;
    }
    CppiaExpr  *makeCrement(CrementOp inOp) HXCPP_OVERRIDE
    {
-      throw "TODO - arrayAccess makeCrement";
+      throw cppiaExprError(this, "++ and -- on an ArrayAccess class are not supported in cppia");
       crement = inOp;
       return this;
    }
@@ -6051,7 +6053,7 @@ struct TVars : public CppiaVoidExpr
          else if (tok=="VARDECLI")
             vars[i] = new VarDecl(stream,true);
          else
-            throw "Bad var decl";
+            throw cppiaError("Expected VARDECL or VARDECLI but found '%.32s'", tok.c_str());
       }
    }
    const char *getName() HXCPP_OVERRIDE { return "TVars"; }
@@ -6586,7 +6588,7 @@ struct VarRef : public CppiaExpr
          CPPIALOG("Could not link var %d %s.\n", varId, inModule.strings[ getStackVarNameId(varId) ].out_str() );
          inModule.layout->dump(inModule.strings,"");
          inModule.where(this);
-         throw "Unknown variable";
+         throw cppiaExprError(this, "Bad link: local variable %s (id %d) is not defined in this scope", inModule.strings[ getStackVarNameId(varId) ].out_str(), varId);
       }
 
       type = var->expressionType;
@@ -7752,7 +7754,7 @@ struct CrementExpr : public CppiaExpr
       {
          CPPIALOG("Could not create increment operator\n");
          inModule.where(lvalue);
-         throw "Bad increment";
+         throw cppiaExprError(lvalue, "Can not use ++ or -- on this expression (%s)", lvalue->getName());
       }
       replace->link(inModule);
       delete this;
@@ -8145,7 +8147,7 @@ CppiaExpr *createCppiaExpr(CppiaStream &stream)
       result = new BitNot(stream);
 
    if (!result)
-      throw "invalid expression";
+      throw cppiaError("Unknown expression '%.32s'. The script might've been compiled against a different version.", tok.c_str());
 
    stream.module->setDebug(result, fileId, line);
 

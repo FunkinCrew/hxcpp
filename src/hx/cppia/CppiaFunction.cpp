@@ -103,7 +103,7 @@ ScriptCallable::ScriptCallable(CppiaModule &inModule,ScriptNamedFunction *inFunc
    const char *signature = inFunction->signature;
    int argCount = strlen(signature)-1;
    if (argCount<0)
-      throw "ScriptNamedFunction: Invalid arg count";
+      throw cppiaError("Native function %s has an empty signature", inFunction->name ? inFunction->name : "?");
 
    args.resize(argCount);
    hasDefault.resize(argCount);
@@ -134,7 +134,7 @@ ScriptCallable::ScriptCallable(CppiaModule &inModule,ScriptNamedFunction *inFunc
             arg.storeType = fsObject;
             break;
          default:
-            throw "Bad haxe signature";
+            throw cppiaError("Native function %s has an unsupported type '%c' in its signature \"%s\"", inFunction->name ? inFunction->name : "?", signature[i+1], signature);
       }
    }
    body = new RelayExpr(inFunction->execute);

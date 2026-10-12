@@ -58,6 +58,11 @@ class  ScriptRegistered;
 class  HaxeNativeClass;
 class  HaxeNativeInterface;
 
+// Format a message to throw.
+const char *cppiaError(const char *inFormat, ...);
+// Same, with the haxe source position of the expression appended.
+const char *cppiaExprError(CppiaExpr *e, const char *inFormat, ...);
+
 enum CppiaOp
 {
    #define CPPIA_OP(ident, name, val) ident = val,
@@ -416,6 +421,7 @@ public:
    void setDebug(CppiaExpr *outExpr, int inFileId, int inLine);
    void boot(CppiaCtx *ctx);
    void where(CppiaExpr *e);
+   const char *linkError(CppiaExpr *e, const char *inKind, const char *inClass, const char *inField);
    void mark(hx::MarkContext *ctx);
    void visit(hx::VisitContext *ctx);
    int  getInterfaceSlot(const std::string &inName);

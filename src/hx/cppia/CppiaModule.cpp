@@ -2,6 +2,7 @@
 #include "Cppia.h"
 #include "CppiaStream.h"
 #include <stdlib.h>
+#include <stdarg.h>
 
 
 namespace hx
@@ -262,6 +263,37 @@ void CppiaModule::where(CppiaExpr *e)
    CPPIALOG("   %s at %s:%d %s\n", e->getName(), e->filename, e->line, e->functionName);
 }
 
+static char sErrorBuffer[1024];
+
+const char *cppiaError(const char *inFormat, ...)
+{
+   va_list args;
+   va_start(args, inFormat);
+   vsnprintf(sErrorBuffer, sizeof(sErrorBuffer), inFormat, args);
+   va_end(args);
+   return sErrorBuffer;
+}
+
+const char *cppiaExprError(CppiaExpr *e, const char *inFormat, ...)
+{
+   char message[768];
+   va_list args;
+   va_start(args, inFormat);
+   vsnprintf(message, sizeof(message), inFormat, args);
+   va_end(args);
+   snprintf(sErrorBuffer, sizeof(sErrorBuffer), "%s (used at %s:%d in %s)", message,
+      e->filename ? e->filename : "?", e->line, e->functionName ? e->functionName : "?");
+   return sErrorBuffer;
+}
+
+const char *CppiaModule::linkError(CppiaExpr *e, const char *inKind, const char *inClass, const char *inField)
+{
+   return cppiaExprError(e,
+      "Bad link: %s %s.%s does not exist in this context. "
+      "The script might've been compiled against a different version.",
+      inKind, inClass, inField);
+}
+
 
 
 void ScriptableRegisterNameSlots(const char *inNames[], int inLength)
@@ -314,7 +346,7 @@ void CppiaConst::fromStream(CppiaStream &stream)
    else if (tok=="SUPER")
       type = cSuper;
    else
-      throw "unknown const value";
+      throw cppiaError("Unknown constant type '%s'", tok.c_str());
 }
 
 
@@ -443,7 +475,7 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
    {
       std::string tok = stream.getAsciiToken();
       if (tok!="CPPIA" && tok!="CPPIB")
-         throw "Bad magic";
+         throw cppiaError("Not a cppia script, expected the file to start with CPPIA or CPPIB but found '%.16s'", tok.c_str());
 
       stream.setBinary(tok=="CPPIB");
 
@@ -464,7 +496,7 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
       {
          int newLine = stream.getByte();
          if (newLine!='\n')
-            throw "Missing new-line after class count";
+            throw cppiaError("Expected a new-line after the class count but found byte 0x%02x, the header is corrupt", newLine);
       }
 
       cppia.classes.reserve(classCount);
@@ -484,7 +516,7 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
          cppia.main->functionName = "__cppia_main";
       }
       else if (tok!="NOMAIN")
-         throw "no main specified";
+         throw cppiaError("Expected MAIN or NOMAIN after the class list but found '%.32s'", tok.c_str());
 
       tok = stream.getToken();
       if (tok=="RESOURCES")
@@ -495,7 +527,7 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
          {
             tok = stream.getToken();
             if (tok!="RESO")
-               throw "no reso tag";
+               throw cppiaError("Expected RESO for resource %d of %d but found '%.32s'", r, count, tok.c_str());
 
             scriptResources[r].mName = cppia.strings[stream.getInt()];
             scriptResources[r].mDataLength = stream.getInt();
@@ -529,15 +561,15 @@ CppiaLoadedModule LoadCppia(const unsigned char *inData, int inDataLength)
          RegisterResources(&scriptResources[0]);
       }
       else
-         throw "no resources tag";
+         throw cppiaError("Expected RESOURCES after the main section but found '%.32s'", tok.c_str());
 
 
    }
    catch(const char *errorString)
    {
-      error = HX_CSTRING("Error reading file ") + String(errorString) +
-                HX_CSTRING(", line ") + String(stream.line) + HX_CSTRING(", char ") +
-                   String(stream.pos);
+      error = HX_CSTRING("Error reading cppia data: ") + String(errorString) +
+                HX_CSTRING(" (cppia line ") + String(stream.line) + HX_CSTRING(", char ") +
+                   String(stream.pos) + HX_CSTRING(")");
    }
 
    if (!error.raw_ptr())
