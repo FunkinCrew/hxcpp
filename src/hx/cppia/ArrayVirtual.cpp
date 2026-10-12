@@ -523,7 +523,7 @@ struct ArrayBuiltinAny : public ArrayBuiltinBase
       
             default: ;
                printf("make setter %d\n", op);
-               throw "setter not implemented";
+               throw cppiaExprError(this, "Unknown array assignment operator %d", (int)op);
          }
 
          delete this;
@@ -893,7 +893,7 @@ template<int FUNC>
 CppiaExpr *TCreateArrayAnyBuiltin(CppiaExpr *inSrc, CppiaExpr *thisExpr, Expressions &args, bool inUnsafe = false)
 {
    if (gArrayArgCount[FUNC]!=args.size())
-      throw "Bad arg count for array builtin";
+      throw cppiaExprError(inSrc, "Array function takes %d arguments but the script passes %d", (int)gArrayArgCount[FUNC], (int)args.size());
 
    return new ArrayBuiltinAny<FUNC,(int)NoCrement::OP>(inSrc, thisExpr, args);
    return 0;
