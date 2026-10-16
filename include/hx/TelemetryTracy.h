@@ -85,6 +85,7 @@ int __hxcpp_tracy_get_zone_count();
 void __hxcpp_tracy_parameter_setup(int idx, ::String name, uint8_t type, int val);
 // Returns the latest value, or for a Trigger parameter the number of presses since the last call.
 int __hxcpp_tracy_parameter_get(int idx);
+void __hxcpp_tracy_frame_image(::Array<unsigned char> data, int width, int height, int offset, bool flip);
 
 // Sets the properties of the current zone on the calling thread (either a manual zone or function zone).
 // No-op if the function zone was skipped.

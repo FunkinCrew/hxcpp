@@ -562,3 +562,14 @@ int __hxcpp_tracy_parameter_get(int idx)
 
 	return value;
 }
+
+void __hxcpp_tracy_frame_image(Array<unsigned char> data, int width, int height, int offset, bool flip)
+{
+	// Tracy copies width * height * 4 bytes, so a short buffer would read out of bounds.
+	if (data->length < width * height * 4)
+	{
+		hx::Throw(HX_CSTRING("Tracy frame image data is smaller than width * height * 4"));
+	}
+
+	::tracy::Profiler::SendFrameImage(data->getBase(), width, height, offset, flip);
+}
