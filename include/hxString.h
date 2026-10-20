@@ -42,12 +42,15 @@ public:
    inline String(const char16_t *inPtr) { *this = create(inPtr); }
    inline String(const char *inPtr) { *this = create(inPtr); }
 
+   // If inLen is -1, the input string is treated as null terminated.
    static String create(const wchar_t *inPtr,int inLen=-1);
    static String create(const char16_t *inPtr,int inLen=-1);
    static String create(const char *inPtr,int inLen=-1);
 
+#if (HXCPP_API_LEVEL >= 500)
    static String create(const ::cpp::marshal::View<char>& buffer);
    static String create(const ::cpp::marshal::View<char16_t>& buffer);
+#endif
 
    // Uses non-gc memory and wont ever be collected
    static ::String createPermanent(const char *inUtf8, int inLen);
@@ -173,8 +176,10 @@ public:
    const wchar_t *wchar_str(hx::IStringAlloc *inBuffer = 0) const;
    const char16_t *wc_str(hx::IStringAlloc *inBuffer = 0, int *outCharLength = 0) const;
 
+#if (HXCPP_API_LEVEL >= 500)
    bool wc_str(::cpp::marshal::View<char16_t> buffer, int* outCharLength = nullptr) const;
    bool utf8_str(::cpp::marshal::View<char> buffer, int* outByteLength = nullptr) const;
+#endif
 
    const char *__CStr() const { return utf8_str(); };
    const wchar_t *__WCStr() const { return wchar_str(0); }
@@ -227,8 +232,8 @@ public:
          #ifdef HXCPP_PARANOID
          unsigned int result = calcHash();
 
-         unsigned int have = (((unsigned int *)__s)[-1] & HX_GC_CONST_ALLOC_BIT) ?
-                ((unsigned int *)__s)[-2] :  *((unsigned int *)(__s+length+1) );
+         unsigned int have = (((unsigned int *)__s)[-1] & HX_GC_CONST_ALLOC_BIT) ? ((unsigned int *)__s)[-2] :
+                             isUTF16Encoded() ? *((unsigned int *)(__w+length+1)) : *((unsigned int *)(__s+length+1));
 
          if ( have != result )
          {
@@ -246,7 +251,14 @@ public:
             return  ((unsigned int *)__s)[-2];
             #endif
          }
-        #ifdef __EMSCRIPTEN__
+         if (isUTF16Encoded()) {
+            #ifdef __EMSCRIPTEN__
+            return *((emscripten_align1_int *)(__w+length+1));
+            #else
+            return *((unsigned int *)(__w+length+1));
+            #endif
+         }
+        #ifdef ____EMSCRIPTEN____
            return *((emscripten_align1_int *)(__s+length+1) );
         #else
            return *((unsigned int *)(__s+length+1) );

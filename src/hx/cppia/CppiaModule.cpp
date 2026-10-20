@@ -98,7 +98,7 @@ void CppiaModule::unload()
 
    main = 0;
 
-   for(hx::UnorderedSet<CppiaExpr *>::iterator i = allExprs.begin(); i != allExprs.end(); ++i)
+   for(std::unordered_set<CppiaExpr *>::iterator i = allExprs.begin(); i != allExprs.end(); ++i)
    {
       ScriptCallable *callable = dynamic_cast<ScriptCallable *>(*i);
       // ends up not freeing the module totally, we do suffer a cost. But it's small.
@@ -162,7 +162,7 @@ void CppiaModule::registerDebugger()
       addScriptableClass( scriptable.makePermanent().utf8_str() );
    }
 
-   for(hx::UnorderedSet<int>::const_iterator i = allFileIds.begin(); i!=allFileIds.end(); ++i)
+   for(std::unordered_set<int>::const_iterator i = allFileIds.begin(); i!=allFileIds.end(); ++i)
       addScriptableFile(strings[*i]);
 
    #if (HXCPP_API_LEVEL >= 500)

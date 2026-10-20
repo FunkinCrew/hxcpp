@@ -623,7 +623,7 @@ class Setup
 
             var minPlatform:Null<Int> = try {
                haxe.Json.parse(sys.io.File.getContent(platformsJson)).min;
-            } catch (e) {
+            } catch (e:Dynamic) {
                Log.warn("Unable to determine minimum supported Android platform: " + e.toString());
                null;
             };

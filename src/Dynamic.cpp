@@ -118,7 +118,7 @@ public:
 
    hx::Class __GetClass() const HXCPP_OVERRIDE { return __FloatClass; }
 
-   virtual int __GetType() const HXCPP_OVERRIDE { return vtFloat; }
+   int __GetType() const HXCPP_OVERRIDE { return vtFloat; }
    String toString() HXCPP_OVERRIDE { return String(mValue); }
    String __ToString() const HXCPP_OVERRIDE { return String(mValue); }
    double __ToDouble() const HXCPP_OVERRIDE { return mValue; }
@@ -150,13 +150,13 @@ public:
 
    hx::Class __GetClass() const HXCPP_OVERRIDE { return __Int64Class; }
 
-   virtual int __GetType() const HXCPP_OVERRIDE { return vtInt64; }
+   int __GetType() const HXCPP_OVERRIDE { return vtInt64; }
    String toString() HXCPP_OVERRIDE { return String(mValue); }
    String __ToString() const HXCPP_OVERRIDE { return String(mValue); }
    double __ToDouble() const HXCPP_OVERRIDE { return (double)mValue; }
    int __ToInt() const HXCPP_OVERRIDE { return (int)mValue; }
    cpp::Int64 __ToInt64() const HXCPP_OVERRIDE { return mValue; }
-   void __GetFields(Array<String> &outFields) HXCPP_OVERRIDE
+   void __GetFields(Array<String>& outFields) HXCPP_OVERRIDE
    {
       outFields->push( HX_HCSTRING("hi","\x01","\x5b","\x00","\x00") );
       outFields->push( HX_HCSTRING("lo","\x83","\x5e","\x00","\x00") );

@@ -6,8 +6,9 @@
 #include <hx/Debug.h>
 #include <hx/Thread.h>
 #include <hx/Telemetry.h>
-#include <hx/Unordered.h>
+#include <hx/thread/Thread.hpp>
 #include <hx/OS.h>
+#include <unordered_map>
 #include <mutex>
 
 
@@ -47,7 +48,7 @@ const char* EXTERN_CLASS_NAME = "extern";
 
 #ifdef HXCPP_STACK_IDS
 static std::mutex sStackMapMutex;
-typedef UnorderedMap<int, StackContext *> StackMap;
+typedef std::unordered_map<int, StackContext *> StackMap;
 static StackMap sStackMap;
 #endif
 
@@ -244,7 +245,7 @@ StackContext::~StackContext()
 void StackContext::onThreadAttach()
 {
    #ifdef HXCPP_STACK_IDS
-   mThreadId = __hxcpp_GetCurrentThreadNumber();
+    mThreadId = hx::thread::Thread_obj::id();
 
    {
        std::lock_guard<std::mutex> guard(sStackMapMutex);

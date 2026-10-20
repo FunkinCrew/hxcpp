@@ -8,6 +8,7 @@
 
 <!-- Use value from Build.xml file unless one is specified from the haxe defines -->
 <set name="hxcpp_api_level" value="${HXCPP_API_LEVEL}" unless="hxcpp_api_level" if="HXCPP_API_LEVEL"  />
+<set name="HXCPP_THREAD_XML" value="${HXCPP}/toolchain/haxe-target-threads.xml" unless="HXCPP_THREAD_XML"/>
 
 <!-- You can override the exes an "exe" section on your own .hxcpp_config -->
 <!-- You can use replace="1" to change the compiler, or omit to add flags -->
@@ -53,7 +54,6 @@
   <depend name="${HXCPP}/include/hx/OS.h"/>
   <depend name="${HXCPP}/include/hx/ObjcHelpers.h"/>
   <depend name="${HXCPP}/include/hx/HeaderVersion.h"/>
-  <depend name="${HXCPP}/include/hx/Unordered.h"/>
   <depend name="${HXCPP}/include/hx/LessThanEq.h"/>
   <depend name="${HXCPP}/include/hx/Interface.h"/>
   <depend name="${HXCPP}/include/cpp/Pointer.h"/>
@@ -77,13 +77,17 @@
   <depend name="${HXCPP}/include/hx/zip/Uncompress.hpp"/>
   <depend name="${HXCPP}/include/hx/thread/RecursiveMutex.hpp"/>
   <depend name="${HXCPP}/include/hx/thread/ConditionVariable.hpp"/>
+  <depend name="${HXCPP}/include/hx/thread/CountingSemaphore.hpp"/>
+  <depend name="${HXCPP}/include/hx/thread/Thread.hpp"/>
+  <depend name="${HXCPP}/include/hx/thread/ThreadLocal.hpp"/>
+  <depend name="${HXCPP}/include/hx/thread/Scratch.hpp"/>
   <section unless="HXCPP_LINK_NO_TOOL_DEPENDS" >
      <depend name="${HXCPP}/toolchain/haxe-target.xml" dateOnly="true" />
      <depend name="${HXCPP}/toolchain/${toolchain}-toolchain.xml" ifExists="${HXCPP}/toolchain/${toolchain}-toolchain.xml" dateOnly="true" />
      <depend name="${HXCPP}/hxcpp.n" ifExists="${HXCPP}/hxcpp.n"  dateOnly="true" />
   </section>
 </files>
- 
+
 
 
 <!-- Additional dependencies for haxe target -->
@@ -166,6 +170,8 @@
   <depend name="${HXCPP}/src/hx/Hash.h"/>
   <depend name="${HXCPP}/src/hx/Unicase.h"/>
   <depend name="${HXCPP}/src/hx/gc/GcRegCapture.h"/>
+  <depend name="${HXCPP}/src/hx/thread/ThreadImpl.hpp"/>
+
   <compilerflag value="-DHX_UNDEFINE_H" />
 
   <precompiledheader name="hxcpp" dir="${HXCPP}/include" />
@@ -188,7 +194,7 @@
     <file name = "src/hx/TelemetryTracy.cpp" if="HXCPP_TRACY"/>
     <file name = "src/hx/Telemetry.cpp" unless="HXCPP_TRACY"/>
   </section>
-  
+
   <file name = "src/hx/Profiler.cpp" if="HXCPP_PROFILER" />
   <file name = "src/hx/Thread.cpp"/>
   <file name = "src/hx/RunLibs.cpp" if="static_link||dll_link"/>
@@ -202,25 +208,9 @@
   <file name = "src/Math.cpp"/>
   <file name = "src/String.cpp" tags="haxe,hxstring" />
 
-  <file name = "src/cpp/encoding/Ascii.cpp"/>
-  <file name = "src/cpp/encoding/Utf8.cpp"/>
-  <file name = "src/cpp/encoding/Utf16.cpp"/>
+  <file name = "src/cpp/encoding/Encodings.cpp" />
 
-  <file name="src/hx/thread/RecursiveMutex.cpp"/>
-  <file name="src/hx/thread/ConditionVariable.cpp"/>
-  
-  <section if="windows">
-    <file name="src/hx/thread/CountingSemaphore.win32.cpp"/>
-  </section>
-  <section if="apple">
-    <file name="src/hx/thread/CountingSemaphore.apple.cpp"/>
-  </section>
-  <section if="linux||android">
-    <file name="src/hx/thread/CountingSemaphore.posix.cpp"/>
-  </section>
-  <section unless="windows||apple||linux||android">
-    <file name="src/hx/thread/CountingSemaphore.unsupported.cpp"/>
-  </section>
+  <include name="${HXCPP_THREAD_XML}"/>
 
   <addTwice if="linux||android" />
   <cache value="1" project="hxcpp_runtime" asLibrary="true" />

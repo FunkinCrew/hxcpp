@@ -3,7 +3,7 @@
 
 #include <hx/Scriptable.h>
 #include <hx/GC.h>
-#include <hx/Unordered.h>
+#include <unordered_set>
 #include <stdio.h>
 #include <vector>
 #include <string>
@@ -396,8 +396,8 @@ public:
    std::vector< CppiaClassInfo * > classes;
    std::vector< CppiaExpr * >      markable;
 
-   hx::UnorderedSet< CppiaExpr * > allExprs;
-   hx::UnorderedSet<int>           allFileIds;
+   std::unordered_set< CppiaExpr * > allExprs;
+   std::unordered_set<int>           allFileIds;
 
    typedef std::map< std::string, int > InterfaceSlots;
    static InterfaceSlots           interfaceSlots;
@@ -633,7 +633,7 @@ public:
    static void link();
 #ifndef NATIVE_CLASS_OVERRIDES_MARKED
 private:
-   void addVtableEntries( std::vector<std::string> &outVtable, hx::UnorderedSet<std::string> &outMethodsSet);
+   void addVtableEntries( std::vector<std::string> &outVtable, std::unordered_set<std::string> &outMethodsSet);
 #endif
 };
 
