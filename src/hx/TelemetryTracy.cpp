@@ -89,13 +89,22 @@ namespace hx
 	class Telemetry
 	{
 	public:
+		// The open zones (manual and Haxe function) on this thread, oldest to newest.
 		std::vector<TracyCZoneCtx> tracyZones;
+		// A count of the manual tracyZones.
+		size_t manualZones;
 		hx::QuickVec<void*> smallAllocs;
 
 		// Whether Haxe function calls on this thread create zones. Set by __hxcpp_tracy_set_function_zones.
 		bool functionZones;
 
-		Telemetry() : tracyZones(0), smallAllocs(), functionZones(true) {}
+		Telemetry() : tracyZones(0), manualZones(0), smallAllocs(), functionZones(true) {}
+
+		// The current nesting depth of Haxe functions, ignoring manual zones.
+		size_t functionZoneDepth() const
+		{
+			return tracyZones.size() - manualZones;
+		}
 	};
 }
 
@@ -241,7 +250,7 @@ void hx::tlmSampleEnter(hx::Telemetry* telemetry, hx::StackFrame* frame)
 	bool skipZone = !telemetry->functionZones;
 
 	#ifdef HXCPP_TRACY_MAX_ZONE_DEPTH
-		skipZone = skipZone || telemetry->tracyZones.size() >= HXCPP_TRACY_MAX_ZONE_DEPTH;
+	skipZone = skipZone || telemetry->functionZoneDepth() >= HXCPP_TRACY_MAX_ZONE_DEPTH;
 	#endif
 
 	if (skipZone)
@@ -261,13 +270,13 @@ void hx::tlmSampleEnter(hx::Telemetry* telemetry, hx::StackFrame* frame)
 			0);
 
 	#if HXCPP_TRACY_INCLUDE_CALLSTACKS
-		// Determine depth from tracyZones vector: +1 since we are about to add one.
-		// Clamped when required by Tracy (see __hxcpp_tracy_callstack_depth).
-		auto depth = __hxcpp_tracy_callstack_depth(telemetry->tracyZones.size() + 1);
+	// Determine depth from function zone depth: +1 since we are about to add one.
+	// Clamped when required by Tracy (see __hxcpp_tracy_callstack_depth).
+	auto depth = __hxcpp_tracy_callstack_depth(telemetry->functionZoneDepth() + 1);
 
-		telemetry->tracyZones.push_back(___tracy_emit_zone_begin_alloc_callstack(srcloc, depth, true));
+	telemetry->tracyZones.push_back(___tracy_emit_zone_begin_alloc_callstack(srcloc, depth, true));
 	#else
-		telemetry->tracyZones.push_back(___tracy_emit_zone_begin_alloc(srcloc, true));
+	telemetry->tracyZones.push_back(___tracy_emit_zone_begin_alloc(srcloc, true));
 	#endif
 }
 
@@ -347,5 +356,104 @@ bool __hxcpp_tracy_set_function_zones(bool enabled)
 
 int __hxcpp_tracy_get_zone_count()
 {
-	return static_cast<int>(hx::StackContext::getCurrent()->mTelemetry->tracyZones.size());
+	return static_cast<int>(hx::StackContext::getCurrent()->mTelemetry->functionZoneDepth());
+}
+
+hx::TracyZoneScope::TracyZoneScope(const hx::StackFrame& frame, const String& name, const String& text)
+	: telemetry(frame.ctx->mTelemetry)
+{
+	hx::strbuf nameBuffer;
+	int nameLength = 0;
+	const char* utf8Name = name.utf8_str(&nameBuffer, false, &nameLength);
+
+	// Provide source location data for the zone.
+	auto srcloc =
+		___tracy_alloc_srcloc_name(
+			frame.lineNumber,
+			frame.position->fileName,
+			strlen(frame.position->fileName),
+			frame.position->fullName,
+			strlen(frame.position->fullName),
+			utf8Name,
+			nameLength,
+			0);
+
+	// Create the zone.
+	#ifdef HXCPP_TRACY_INCLUDE_CALLSTACKS
+	auto zone = ___tracy_emit_zone_begin_alloc_callstack(srcloc, __hxcpp_tracy_callstack_depth(telemetry->functionZoneDepth()), true);
+	#else
+	auto zone = ___tracy_emit_zone_begin_alloc(srcloc, true);
+	#endif
+
+	// Apply zone text if relevant.
+	if (text.raw_ptr())
+	{
+		hx::strbuf textBuffer;
+		int textLength = 0;
+		const char* utf8Text = text.utf8_str(&textBuffer, false, &textLength);
+
+		___tracy_emit_zone_text(zone, utf8Text, textLength);
+	}
+
+	telemetry->tracyZones.push_back(zone);
+	telemetry->manualZones++;
+}
+
+hx::TracyZoneScope::~TracyZoneScope()
+{
+	// Clean up the zone.
+	___tracy_emit_zone_end(telemetry->tracyZones.back());
+
+	telemetry->tracyZones.pop_back();
+	telemetry->manualZones--;
+}
+
+namespace
+{
+	// The thread's innermost profiling zone.
+	// Used when setting zone properties (Tracy only allows the current innermost zone to be assigned).
+	// Property calls on skipped zones do nothing (no errors!).
+	TracyCZoneCtx innermostZone()
+	{
+		auto telemetry = hx::StackContext::getCurrent()->mTelemetry;
+
+		if (telemetry->tracyZones.empty())
+		{
+			return TracyCZoneCtx{};
+		}
+
+		return telemetry->tracyZones.back();
+	}
+}
+
+void __hxcpp_tracy_zone_text(String text)
+{
+	// Set the zone's text, accounting for UTF-8 string length.
+	hx::strbuf buffer;
+	int byteLength = 0;
+	const char* utf8 = text.utf8_str(&buffer, false, &byteLength);
+
+	___tracy_emit_zone_text(innermostZone(), utf8, byteLength);
+}
+
+void __hxcpp_tracy_zone_name(String name)
+{
+	// Set the zone's name, accounting for UTF-8 string length.
+	hx::strbuf buffer;
+	int byteLength = 0;
+	const char* utf8 = name.utf8_str(&buffer, false, &byteLength);
+
+	___tracy_emit_zone_name(innermostZone(), utf8, byteLength);
+}
+
+void __hxcpp_tracy_zone_color(int color)
+{
+	// Set the zone's color.
+	___tracy_emit_zone_color(innermostZone(), static_cast<uint32_t>(color));
+}
+
+void __hxcpp_tracy_zone_value(cpp::Int64 value)
+{
+	// Set the zone's value.
+	___tracy_emit_zone_value(innermostZone(), static_cast<uint64_t>(value));
 }
