@@ -16,11 +16,13 @@ namespace
 	const char* lohName = "Large Object Heap";
 
 	std::vector<hx::Telemetry*> created;
+	std::mutex createdLock;
+
 	hx::QuickVec<void*> largeAllocs;
 	std::mutex largeAllocsLock;
 
 	// Hold a reference to small objects when their thread is destroyed, until Tracy can learn they've been freed.
-	// Only used by tlmDestroy so no mutex is needed.
+	// Only used by tlmDestroy and GC sweep, which both run under the gThreadStateChangeLock mutex.
 	hx::QuickVec<void*> orphanedSmallAllocs;
 
 	// Tracy receives name pointers from HXCPP and reads them from its thread.
@@ -160,6 +162,8 @@ void __hxt_gc_realloc(void* oldObj, void* newObj, int newSize) { }
 void __hxt_gc_after_mark(int byteMarkId, int endianByteMarkId)
 {
 	#ifdef HXCPP_TRACY_MEMORY
+		std::lock_guard<std::mutex> lock(createdLock);
+
 		for (auto&& telemetry : created)
 		{
 			sweepUnmarked(telemetry->smallAllocs, sohName, byteMarkId, endianByteMarkId);
@@ -185,6 +189,8 @@ hx::Telemetry* hx::tlmCreate(StackContext* stack)
 {
 	auto obj = new hx::Telemetry();
 
+	std::lock_guard<std::mutex> lock(createdLock);
+
 	created.push_back(obj);
 
 	return obj;
@@ -192,6 +198,8 @@ hx::Telemetry* hx::tlmCreate(StackContext* stack)
 
 void hx::tlmDestroy(hx::Telemetry* telemetry)
 {
+	std::lock_guard<std::mutex> lock(createdLock);
+
 	created.erase(std::find(created.begin(), created.end(), telemetry));
 
 	#ifdef HXCPP_TRACY_MEMORY
