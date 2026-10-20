@@ -4904,7 +4904,10 @@ public:
       sgAllocsSinceLastSpam = 0;
       #endif
 
+      // With Tracy, __hxt_gc_start/__hxt_gc_end emit this zone instead, so depth limits can't hide it.
+      #ifndef HXCPP_TRACY
       HX_STACK_FRAME("GC", "collect", 0, "GC::collect", __FILE__, __LINE__,0)
+      #endif
       #ifdef SHOW_MEM_EVENTS
       int here = 0;
       GCLOG("=== Collect === %p\n",&here);
