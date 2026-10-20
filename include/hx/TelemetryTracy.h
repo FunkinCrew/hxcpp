@@ -40,19 +40,31 @@ inline int __hxcpp_tracy_callstack_depth(size_t zoneDepth)
 	#endif
 #endif
 
-#ifdef HXCPP_TRACY_INCLUDE_CALLSTACKS
-#define HXCPP_TRACY_ZONE(name) \
-	::hx::strbuf TracyConcat(_hx_tracy_str_buffer, TracyLine); \
-	int TracyConcat(_hx_tracy_str_length, TracyLine) = 0; \
-	const char *TracyConcat(_hx_tracy_str_buffer_ptr, TracyLine) = name.utf8_str(&TracyConcat(_hx_tracy_str_buffer, TracyLine), false, &TracyConcat(_hx_tracy_str_length, TracyLine)); \
-	::tracy::ScopedZone TracyConcat(_hx_tracy_scoped_zone,TracyLine)(_hx_stackframe.lineNumber, _hx_stackframe.position->fileName, strlen(_hx_stackframe.position->fileName), _hx_stackframe.position->fullName, strlen(_hx_stackframe.position->fullName), TracyConcat(_hx_tracy_str_buffer_ptr, TracyLine), TracyConcat(_hx_tracy_str_length, TracyLine), __hxcpp_tracy_callstack_depth(__hxcpp_tracy_get_zone_count()));
-#else
-#define HXCPP_TRACY_ZONE(name) \
-	::hx::strbuf TracyConcat(_hx_tracy_str_buffer, TracyLine); \
-	int TracyConcat(_hx_tracy_str_length, TracyLine) = 0; \
-	const char *TracyConcat(_hx_tracy_str_buffer_ptr, TracyLine) = name.utf8_str(&TracyConcat(_hx_tracy_str_buffer, TracyLine), false, &TracyConcat(_hx_tracy_str_length, TracyLine)); \
-	::tracy::ScopedZone TracyConcat(_hx_tracy_scoped_zone,TracyLine)(_hx_stackframe.lineNumber, _hx_stackframe.position->fileName, strlen(_hx_stackframe.position->fileName), _hx_stackframe.position->fullName, strlen(_hx_stackframe.position->fullName), TracyConcat(_hx_tracy_str_buffer_ptr, TracyLine), TracyConcat(_hx_tracy_str_length, TracyLine), -1);
-#endif
+namespace hx
+{
+	// Tracks a manually created Tracy zone.
+	// Pushed onto the zone stack with any automatic function zones, so __hxcpp_tracy_zone_* targets the right zone.
+	// Manual zones are always recorded, and don't count toward HXCPP_TRACY_MAX_ZONE_DEPTH.
+	class TracyZoneScope
+	{
+	public:
+		TracyZoneScope(const ::hx::StackFrame& frame, const ::String& name, const ::String& text);
+		~TracyZoneScope();
+
+		TracyZoneScope(const TracyZoneScope&) = delete;
+		TracyZoneScope& operator=(const TracyZoneScope&) = delete;
+
+	private:
+		::hx::Telemetry* telemetry;
+	};
+}
+
+// Create a named zone for the rest of the enclosing scope.
+#define HXCPP_TRACY_ZONE(name) ::hx::TracyZoneScope TracyConcat(_hx_tracy_zone, TracyLine)(_hx_stackframe, name, ::String());
+
+// Create a zone with a fixed name along with additional dynamic text, such as a call parameter.
+// Use this instead of providing unique names for zones, since Tracy has a hard cap on source locations.
+#define HXCPP_TRACY_ZONE_TEXT(name, text) ::hx::TracyZoneScope TracyConcat(_hx_tracy_zone, TracyLine)(_hx_stackframe, name, text);
 
 void __hxcpp_tracy_framemark();
 void __hxcpp_tracy_framemark_named(::String name);
@@ -67,5 +79,12 @@ void __hxcpp_tracy_set_thread_name_and_group(String name, int groupHint);
 // Returns the previous setting so callers can restore it.
 bool __hxcpp_tracy_set_function_zones(bool enabled);
 int __hxcpp_tracy_get_zone_count();
+
+// Sets the properties of the current zone on the calling thread (either a manual zone or function zone).
+// No-op if the function zone was skipped.
+void __hxcpp_tracy_zone_text(::String text);
+void __hxcpp_tracy_zone_name(::String name);
+void __hxcpp_tracy_zone_color(int color);
+void __hxcpp_tracy_zone_value(::cpp::Int64 value);
 
 #endif
