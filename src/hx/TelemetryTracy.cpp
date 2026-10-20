@@ -324,6 +324,11 @@ void hx::tlmSampleExit(hx::Telemetry* telemetry)
 	telemetry->tracyZones.pop_back();
 }
 
+bool __hxcpp_tracy_is_connected()
+{
+	return ::tracy::GetProfiler().IsConnected();
+}
+
 void __hxcpp_tracy_framemark()
 {
 	::tracy::Profiler::SendFrameMark(0);
