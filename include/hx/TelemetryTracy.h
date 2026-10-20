@@ -63,8 +63,9 @@ void __hxcpp_tracy_plot_config(::String name, uint8_t format, bool step, bool fi
 void __hxcpp_tracy_message(::String msg, int color);
 void __hxcpp_tracy_message_app_info(::String info);
 void __hxcpp_tracy_set_thread_name_and_group(String name, int groupHint);
-// Enable or disable the zones created automatically for Haxe function calls. Manual zones are unaffected.
-void __hxcpp_tracy_set_function_zones(bool enabled);
+// Enable or disable the zones created automatically for Haxe function calls on the calling thread. Manual zones are unaffected.
+// Returns the previous setting so callers can restore it.
+bool __hxcpp_tracy_set_function_zones(bool enabled);
 int __hxcpp_tracy_get_zone_count();
 
 #endif
