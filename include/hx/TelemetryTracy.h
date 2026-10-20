@@ -66,6 +66,8 @@ namespace hx
 // Use this instead of providing unique names for zones, since Tracy has a hard cap on source locations.
 #define HXCPP_TRACY_ZONE_TEXT(name, text) ::hx::TracyZoneScope TracyConcat(_hx_tracy_zone, TracyLine)(_hx_stackframe, name, text);
 
+// Whether Tracy is connected. Nothing is recorded if this is false and HXCPP_TRACY_ON_DEMAND is on.
+bool __hxcpp_tracy_is_connected();
 void __hxcpp_tracy_framemark();
 void __hxcpp_tracy_framemark_named(::String name);
 void __hxcpp_tracy_framemark_start(::String name);
