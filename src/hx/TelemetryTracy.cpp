@@ -14,6 +14,21 @@ namespace
 
 	const ___tracy_source_location_data gcSourceLocation = { "GC::collect", "__hxt_gc_start", TracyFile, (uint32_t)TracyLine, 0 };
 
+	// Plotted after each collection. memInfo values match MEM_INFO_* in Immix.cpp.
+	struct GcPlot
+	{
+		const char* name;
+		int memInfo;
+	};
+
+	const GcPlot gcPlots[] = {
+		{ "GC Memory Used", 0 },
+		{ "GC Memory Reserved", 1 },
+		{ "GC Large Objects", 3 },
+	};
+
+	bool gcPlotsConfigured = false;
+
 	const char* sohName = "Small Object Heap";
 	const char* lohName = "Large Object Heap";
 
@@ -197,6 +212,23 @@ void __hxt_gc_start()
 void __hxt_gc_end()
 {
 	___tracy_emit_zone_end(gcZone);
+
+	// Heap totals after each collection. Unlike HXCPP_TRACY_MEMORY, these work with HXCPP_GC_GENERATIONAL.
+	// The values are read while the collector holds gThreadStateChangeLock and no thread can allocate,
+	// which also serializes the one-time configuration below. On-demand mode resends it to each new connection.
+	if (!gcPlotsConfigured)
+	{
+		for (auto&& plot : gcPlots)
+		{
+			::tracy::Profiler::ConfigurePlot(plot.name, ::tracy::PlotFormatType::Memory, true, true, 0);
+		}
+		gcPlotsConfigured = true;
+	}
+
+	for (auto&& plot : gcPlots)
+	{
+		::tracy::Profiler::PlotData(plot.name, static_cast<int64_t>(__hxcpp_gc_mem_info(plot.memInfo)));
+	}
 }
 
 hx::Telemetry* hx::tlmCreate(StackContext* stack)
