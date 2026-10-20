@@ -1,6 +1,7 @@
 #include <hxcpp.h>
 #include <hx/TelemetryTracy.h>
 
+#include <atomic>
 #include <vector>
 #include <mutex>
 #include <string>
@@ -31,6 +32,9 @@ namespace
 	// We use a set so each unique name is only stored once, and never free it so Tracy can read the names while the program is shutting down.
 	std::unordered_set<std::string>* internedNames = new std::unordered_set<std::string>();
 	std::mutex internedNamesLock;
+
+	// Whether Haxe function calls create zones. Set by __hxcpp_tracy_set_function_zones, read on every function entry.
+	std::atomic<bool> functionZonesEnabled(true);
 
 	// Store the provided name as a UTF-8 pointer that Tracy can always access.
 	const char* internName(const String& name)
@@ -230,6 +234,21 @@ void hx::tlmDetach(hx::Telemetry* telemetry)
 
 void hx::tlmSampleEnter(hx::Telemetry* telemetry, hx::StackFrame* frame)
 {
+	// Skip function zones if we call __hxcpp_tracy_set_function_zones,
+	// or reach a maximum configured depth.
+	bool skipZone = !functionZonesEnabled.load(std::memory_order_relaxed);
+
+	#ifdef HXCPP_TRACY_MAX_ZONE_DEPTH
+		skipZone = skipZone || telemetry->tracyZones.size() >= HXCPP_TRACY_MAX_ZONE_DEPTH;
+	#endif
+
+	if (skipZone)
+	{
+		telemetry->tracyZones.push_back(TracyCZoneCtx{});
+
+		return;
+	}
+
 	auto srcloc =
 		___tracy_alloc_srcloc(
 			frame->lineNumber,
@@ -312,6 +331,11 @@ void __hxcpp_tracy_set_thread_name_and_group(String name, int groupHint)
 {
 	hx::strbuf buffer;
 	::tracy::SetThreadNameWithHint(name.utf8_str(&buffer), groupHint);
+}
+
+void __hxcpp_tracy_set_function_zones(bool enabled)
+{
+	functionZonesEnabled.store(enabled, std::memory_order_relaxed);
 }
 
 int __hxcpp_tracy_get_zone_count()
