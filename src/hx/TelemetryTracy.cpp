@@ -1,6 +1,7 @@
 #include <hxcpp.h>
 #include <hx/TelemetryTracy.h>
 
+#include <map>
 #include <vector>
 #include <mutex>
 #include <string>
@@ -64,6 +65,34 @@ namespace
 		std::lock_guard<std::mutex> lock(internedNamesLock);
 
 		return internedNames->emplace(utf8, byteLength).first->c_str();
+	}
+
+	struct Parameter
+	{
+		bool isTrigger;
+		// The latest value, or for a Trigger parameter the presses since the last __hxcpp_tracy_parameter_get.
+		int32_t value;
+	};
+
+	std::map<uint32_t, Parameter> parameters;
+	std::mutex parametersLock;
+
+	// Called on Tracy's worker thread, so it only records the value for the game thread to read.
+	// Tracy sends a Trigger press as the value it was set up with, so presses are counted instead.
+	void onParameterChanged(void* data, uint32_t idx, int32_t val)
+	{
+		std::lock_guard<std::mutex> lock(parametersLock);
+
+		auto& parameter = parameters[idx];
+
+		if (parameter.isTrigger)
+		{
+			parameter.value++;
+		}
+		else
+		{
+			parameter.value = val;
+		}
 	}
 
 	bool isLargeObject(void* ptr)
@@ -493,4 +522,43 @@ void __hxcpp_tracy_zone_value(cpp::Int64 value)
 {
 	// Set the zone's value.
 	___tracy_emit_zone_value(innermostZone(), static_cast<uint64_t>(value));
+}
+
+void __hxcpp_tracy_parameter_setup(int idx, String name, uint8_t type, int val)
+{
+	{
+		std::lock_guard<std::mutex> lock(parametersLock);
+
+		auto isTrigger = type == TracyParamTypeTrigger;
+
+		parameters[idx] = { isTrigger, isTrigger ? 0 : val };
+	}
+
+	// Tracy keeps the name pointer and re-reads it on every connection, so it is never freed.
+	hx::strbuf buffer;
+	auto persistentName = strdup(name.utf8_str(&buffer));
+
+	::tracy::Profiler::ParameterRegister(onParameterChanged, nullptr);
+	::tracy::Profiler::ParameterSetup(idx, persistentName, type, val);
+}
+
+int __hxcpp_tracy_parameter_get(int idx)
+{
+	std::lock_guard<std::mutex> lock(parametersLock);
+
+	auto it = parameters.find(idx);
+
+	if (it == parameters.end())
+	{
+		return 0;
+	}
+
+	auto value = it->second.value;
+
+	if (it->second.isTrigger)
+	{
+		it->second.value = 0;
+	}
+
+	return value;
 }

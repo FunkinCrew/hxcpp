@@ -81,6 +81,10 @@ void __hxcpp_tracy_set_thread_name_and_group(String name, int groupHint);
 // Returns the previous setting so callers can restore it.
 bool __hxcpp_tracy_set_function_zones(bool enabled);
 int __hxcpp_tracy_get_zone_count();
+// type is TracyParamTypeInt, TracyParamTypeBool or TracyParamTypeTrigger.
+void __hxcpp_tracy_parameter_setup(int idx, ::String name, uint8_t type, int val);
+// Returns the latest value, or for a Trigger parameter the number of presses since the last call.
+int __hxcpp_tracy_parameter_get(int idx);
 
 // Sets the properties of the current zone on the calling thread (either a manual zone or function zone).
 // No-op if the function zone was skipped.
