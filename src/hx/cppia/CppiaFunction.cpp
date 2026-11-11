@@ -15,7 +15,7 @@ String sInvalidArgCount = HX_CSTRING("Invalid arguement count");
 String sUnloadedMessage = HX_CSTRING("Called a function from a cppia class that has been unloaded");
 
 #ifdef CPPIA_JIT
-static void SLJIT_CALL unloadedCompiled(CppiaCtx *ctx);
+static void SLJIT_FUNC unloadedCompiled(CppiaCtx *ctx);
 #endif
 
 
@@ -705,7 +705,7 @@ struct UnloadedBody : public CppiaExpr
 static UnloadedBody sUnloadedBody;
 
 #ifdef CPPIA_JIT
-static void SLJIT_CALL unloadedCompiled(CppiaCtx *ctx)
+static void SLJIT_FUNC unloadedCompiled(CppiaCtx *ctx)
 {
    TRY_NATIVE
    hx::Throw( sUnloadedMessage );

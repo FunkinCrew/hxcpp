@@ -98,7 +98,7 @@ void CppiaModule::unload()
 
    main = 0;
 
-   for(hx::UnorderedSet<CppiaExpr *>::iterator i = allExprs.begin(); i != allExprs.end(); ++i)
+   for(std::unordered_set<CppiaExpr *>::iterator i = allExprs.begin(); i != allExprs.end(); ++i)
    {
       ScriptCallable *callable = dynamic_cast<ScriptCallable *>(*i);
       // ends up not freeing the module totally, we do suffer a cost. But it's small.
