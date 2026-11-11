@@ -1898,7 +1898,7 @@ struct CallHaxe : public CppiaExpr
       CATCH_NATIVE
    }
 
-   static void SLJIT_CALL tryCallHaxeSuper( CallHaxe *expr, StackContext *ctx )
+   static void SLJIT_FUNC tryCallHaxeSuper( CallHaxe *expr, StackContext *ctx )
    {
       TRY_NATIVE
       expr->invoke(ctx, ctx->getThis(false));
