@@ -189,7 +189,7 @@ void CppiaVar::linkVarTypes(CppiaModule &cppia, int &ioOffset)
       exprType = typeId==0 ? etObject : type->expressionType;
       AlignOffset(exprType, ioOffset);
       offset = ioOffset;
-      
+
       switch(exprType)
       {
          case etInt: ioOffset += sizeof(int); storeType=fsInt; break;
@@ -213,11 +213,14 @@ void CppiaVar::createDynamic(hx::Object *inBase)
 Dynamic CppiaVar::getValue(hx::Object *inThis)
 {
    char *base = ((char *)inThis) + offset;
- 
+
    switch(storeType)
    {
       case fsByte: return *(unsigned char *)(base);
-      case fsInt: return *(int *)(base);
+      case fsInt:
+         if (type && (type->name==HX_CSTRING("Bool") || type->name==HX_CSTRING("bool")))
+            return (bool)*(int *)(base);
+         return *(int *)(base);
       case fsBool: return *(bool *)(base);
       case fsFloat: return *(Float *)(base);
       case fsString: return *(String *)(base);
@@ -231,7 +234,7 @@ Dynamic CppiaVar::getValue(hx::Object *inThis)
 Dynamic CppiaVar::setValue(hx::Object *inThis, Dynamic inValue)
 {
    char *base = ((char *)inThis) + offset;
- 
+
    switch(storeType)
    {
       case fsByte: *(unsigned char *)(base) = inValue; return inValue;
@@ -569,7 +572,7 @@ void CppiaStackVar::setDefault(CppiaCtx *inCxt, const CppiaConst &inDefault)
             case fsString:
             case fsUnknown:
                break; // handled above, or not needed
- 
+
          }
       }
    }
@@ -628,7 +631,7 @@ void CppiaStackVar::genDefault(CppiaCompiler *compiler, const CppiaConst &inDefa
             compiler->move( destPos.as(jtByte), JitVal((int)(unsigned char)inDefault.ival));
             break;
 
-         case fsBool: 
+         case fsBool:
             compiler->move( destPos.as(jtByte), JitVal((int)(bool)inDefault.ival));
             break;
 
@@ -661,7 +664,7 @@ void CppiaStackVar::genDefault(CppiaCompiler *compiler, const CppiaConst &inDefa
       switch(storeType)
       {
          case fsByte:
-         case fsBool: 
+         case fsBool:
             //Fallthough...
             //compiler->callNative( (void *)objToInt, sJitTemp0.as(jtPointer) );
             //compiler->move( destPos.as(jtByte), sJitReturnReg.as(jtByte));
